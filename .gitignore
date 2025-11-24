@@ -1,0 +1,75 @@
+# Ignorar archivos binarios y de compilación
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# Ignorar archivos de usuario de Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ignorar archivos de configuración local
+.env
+*.local.json
+launchSettings.json
+
+# Ignorar carpetas de dependencias
+node_modules/
+packages/
+
+# Ignorar archivos de logs
+logs/
+*.log
+
+# Ignorar archivos de base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignorar archivos temporales
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos de IDE
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+
+# Ignorar archivos de cobertura de tests
+coverage/
+*.coverage
+*.coveragexml
+TestResults/
+
+# Ignorar archivos de publicación
+publish/
+dist/
+
+# Ignorar archivos de Docker
+docker-compose.override.yml
+
+# Ignorar archivos de migraciones temporales
+**/Migrations/*.Designer.cs
+
+# Ignorar archivos de uploads
+uploads/
+wwwroot/uploads/
+
+# Ignorar archivos de certificados
+*.pfx
+*.p12
+*.key
+*.crt
+*.cer
+
+# Mantener directorios vacíos
+!.gitkeep
