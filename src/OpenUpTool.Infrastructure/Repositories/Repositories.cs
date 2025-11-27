@@ -116,7 +116,17 @@ public class ProjectPlanRepository : IProjectPlanRepository
     {
         return await _context.ProjectPlans
             .Include(p => p.Milestones)
-            .FirstOrDefaultAsync(p => p.ProjectId == projectId);
+            .Where(p => p.ProjectId == projectId && p.IsActive)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<IEnumerable<ProjectPlan>> GetAllVersionsByProjectIdAsync(Guid projectId)
+    {
+        return await _context.ProjectPlans
+            .Include(p => p.Milestones)
+            .Where(p => p.ProjectId == projectId)
+            .OrderByDescending(p => p.Version)
+            .ToListAsync();
     }
 
     public async Task<ProjectPlan?> GetByIdAsync(Guid id)
@@ -275,5 +285,55 @@ public class ArtifactTypeRepository : IArtifactTypeRepository
         _context.ArtifactTypes.Update(artifactType);
         await _context.SaveChangesAsync();
         return artifactType;
+    }
+}
+
+public class ArtifactVersionRepository : IArtifactVersionRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public ArtifactVersionRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<ArtifactVersion>> GetByArtifactIdAsync(Guid artifactId)
+    {
+        return await _context.ArtifactVersions
+            .Where(v => v.ArtifactId == artifactId)
+            .OrderByDescending(v => v.VersionNumber)
+            .ToListAsync();
+    }
+
+    public async Task<ArtifactVersion?> GetByIdAsync(Guid id)
+    {
+        return await _context.ArtifactVersions.FindAsync(id);
+    }
+
+    public async Task<ArtifactVersion> CreateAsync(ArtifactVersion version)
+    {
+        version.CreatedAt = DateTime.UtcNow;
+        version.UpdatedAt = DateTime.UtcNow;
+        _context.ArtifactVersions.Add(version);
+        await _context.SaveChangesAsync();
+        return version;
+    }
+
+    public async Task<ArtifactVersion> UpdateAsync(ArtifactVersion version)
+    {
+        version.UpdatedAt = DateTime.UtcNow;
+        _context.ArtifactVersions.Update(version);
+        await _context.SaveChangesAsync();
+        return version;
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var version = await _context.ArtifactVersions.FindAsync(id);
+        if (version != null)
+        {
+            _context.ArtifactVersions.Remove(version);
+            await _context.SaveChangesAsync();
+        }
     }
 }

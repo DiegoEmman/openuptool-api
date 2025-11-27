@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
@@ -6,6 +7,7 @@ namespace OpenUpTool.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
@@ -60,6 +62,7 @@ public class ProjectsController : ControllerBase
     /// Crea un nuevo proyecto
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<ProjectDto>> Create([FromBody] CreateProjectDto dto)
     {
         try
@@ -80,6 +83,7 @@ public class ProjectsController : ControllerBase
     /// Actualiza un proyecto existente
     /// </summary>
     [HttpPatch("{id}")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<ProjectDto>> Update(Guid id, [FromBody] UpdateProjectDto dto)
     {
         try
@@ -101,6 +105,7 @@ public class ProjectsController : ControllerBase
     /// Elimina un proyecto
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id)
     {
         try

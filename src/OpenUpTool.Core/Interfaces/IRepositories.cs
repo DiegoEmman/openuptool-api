@@ -23,6 +23,7 @@ public interface IPhaseRepository
 public interface IProjectPlanRepository
 {
     Task<ProjectPlan?> GetByProjectIdAsync(Guid projectId);
+    Task<IEnumerable<ProjectPlan>> GetAllVersionsByProjectIdAsync(Guid projectId);
     Task<ProjectPlan?> GetByIdAsync(Guid id);
     Task<ProjectPlan> CreateAsync(ProjectPlan plan);
     Task<ProjectPlan> UpdateAsync(ProjectPlan plan);
@@ -51,4 +52,13 @@ public interface IArtifactTypeRepository
     Task<ArtifactType?> GetByIdAsync(Guid id);
     Task<ArtifactType> CreateAsync(ArtifactType artifactType);
     Task<ArtifactType> UpdateAsync(ArtifactType artifactType);
+}
+
+public interface IArtifactVersionRepository
+{
+    Task<IEnumerable<ArtifactVersion>> GetByArtifactIdAsync(Guid artifactId);
+    Task<ArtifactVersion?> GetByIdAsync(Guid id);
+    Task<ArtifactVersion> CreateAsync(ArtifactVersion version);
+    Task<ArtifactVersion> UpdateAsync(ArtifactVersion version);
+    Task DeleteAsync(Guid id);
 }

@@ -1,9 +1,13 @@
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using OpenUpTool.Api.Middleware;
 using OpenUpTool.Core.Interfaces;
 using OpenUpTool.Core.Services;
 using OpenUpTool.Infrastructure.Data;
 using OpenUpTool.Infrastructure.Repositories;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace OpenUpTool.Api;
@@ -24,6 +28,13 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
 
+        // Configurar logging - TEMPORAL: nivel Information para debug
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+        builder.Logging.SetMinimumLevel(LogLevel.Information); // Cambiado temporalmente para debug
+        builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Error); // Solo errores de EF
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+
         // Configurar conexión a base de datos
         // Construir la cadena de conexión desde variables de entorno
         var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
@@ -33,6 +44,9 @@ public class Program
         var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "DevPassword123!";
         
         var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";
+        
+        // Configurar AppContext para deshabilitar timestamps con zona horaria
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         
         builder.Services.AddDbContext<OpenUpToolDbContext>(options =>
             options.UseNpgsql(connectionString));
@@ -57,6 +71,7 @@ public class Program
         builder.Services.AddScoped<IIterationRepository, IterationRepository>();
         builder.Services.AddScoped<IArtifactRepository, ArtifactRepository>();
         builder.Services.AddScoped<IArtifactTypeRepository, ArtifactTypeRepository>();
+        builder.Services.AddScoped<IArtifactVersionRepository, ArtifactVersionRepository>();
 
         // Registrar servicios
         builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -65,6 +80,39 @@ public class Program
         builder.Services.AddScoped<IIterationService, IterationService>();
         builder.Services.AddScoped<IArtifactService, ArtifactService>();
         builder.Services.AddScoped<IArtifactTypeService, ArtifactTypeService>();
+        builder.Services.AddScoped<IAuthService, OpenUpTool.Infrastructure.Services.AuthService>();
+        builder.Services.AddScoped<IFileStorageService>(sp =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            var logger = sp.GetRequiredService<ILogger<OpenUpTool.Infrastructure.Services.FileStorageService>>();
+            var uploadPath = Path.Combine(env.WebRootPath ?? env.ContentRootPath, "uploads");
+            return new OpenUpTool.Infrastructure.Services.FileStorageService(uploadPath, logger);
+        });
+
+        // Configurar JWT Authentication
+        var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                       "your-super-secret-key-change-this-in-production-min-32-chars";
+        
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "OpenUpTool",
+                ValidAudience = "OpenUpTool",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+            };
+        });
+
+        builder.Services.AddAuthorization();
 
         // Configurar los servicios
         builder.Services.AddControllers()
@@ -91,6 +139,31 @@ public class Program
                 }
             });
             
+            // Configurar autenticación JWT en Swagger
+            c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Authorization: Bearer {token}\"",
+                Name = "Authorization",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                Scheme = "Bearer"
+            });
+
+            c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+            {
+                {
+                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    {
+                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                        {
+                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
+            
             // Incluir comentarios XML si existen
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -101,6 +174,9 @@ public class Program
             
             // Habilitar anotaciones
             c.EnableAnnotations();
+            
+            // Soporte para file uploads
+            c.OperationFilter<FileUploadOperationFilter>();
         });
         
         var app = builder.Build();
@@ -134,8 +210,16 @@ public class Program
         });
 
         app.UseHttpsRedirection();
+        
+        // Middleware de logging personalizado
+        app.UseMiddleware<RequestLoggingMiddleware>();
+        
         app.UseCors("AllowFrontend");
+        
+        // Autenticación y Autorización
+        app.UseAuthentication();
         app.UseAuthorization();
+        
         app.MapControllers();
 
         // Mostrar información de la API al iniciar

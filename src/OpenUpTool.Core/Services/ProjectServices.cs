@@ -34,22 +34,25 @@ public class ProjectService : IProjectService
             Id = Guid.NewGuid(),
             Name = dto.Name.Trim(),
             Identifier = dto.Identifier.Trim(),
-            StartDate = dto.StartDate,
+            StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc),
             Status = "Creado",
             Owner = dto.Owner?.Trim(),
             Description = dto.Description?.Trim(),
-            Tags = dto.Tags ?? new List<string>()
+            Tags = dto.Tags ?? new List<string>(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var createdProject = await _projectRepository.CreateAsync(project);
 
         // Crear las 4 fases estándar de OpenUP
+        var now = DateTime.UtcNow;
         var phases = new[]
         {
-            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "INCEPTION", Name = "Incepción", Status = "PENDING", OrderIndex = 1 },
-            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "ELABORATION", Name = "Elaboración", Status = "PENDING", OrderIndex = 2 },
-            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "CONSTRUCTION", Name = "Construcción", Status = "PENDING", OrderIndex = 3 },
-            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "TRANSITION", Name = "Transición", Status = "PENDING", OrderIndex = 4 }
+            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "INCEPTION", Name = "Incepción", Status = "PENDING", OrderIndex = 1, CreatedAt = now, UpdatedAt = now },
+            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "ELABORATION", Name = "Elaboración", Status = "PENDING", OrderIndex = 2, CreatedAt = now, UpdatedAt = now },
+            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "CONSTRUCTION", Name = "Construcción", Status = "PENDING", OrderIndex = 3, CreatedAt = now, UpdatedAt = now },
+            new Phase { Id = Guid.NewGuid(), ProjectId = createdProject.Id, PhaseCode = "TRANSITION", Name = "Transición", Status = "PENDING", OrderIndex = 4, CreatedAt = now, UpdatedAt = now }
         };
 
         await _phaseRepository.CreateManyAsync(phases);

@@ -25,6 +25,8 @@ public interface IProjectPlanService
 {
     Task<ProjectPlanDto?> GetPlanByProjectAsync(Guid projectId);
     Task<ProjectPlanDto> CreateInitialPlanAsync(Guid projectId, CreateProjectPlanDto dto);
+    Task<ProjectPlanDto> CreateNewPlanVersionAsync(Guid projectId, CreateProjectPlanDto dto);
+    Task<IEnumerable<ProjectPlanDto>> GetPlanHistoryAsync(Guid projectId);
 }
 
 public interface IIterationService
@@ -46,4 +48,12 @@ public interface IArtifactTypeService
     Task<IEnumerable<ArtifactTypeDto>> GetAllArtifactTypesAsync();
     Task<IEnumerable<ArtifactTypeDto>> GetArtifactTypesByPhaseAsync(string phase);
     Task SeedDefaultInceptionTypesAsync();
+}
+
+public interface IFileStorageService
+{
+    Task<(string FilePath, string FileName, long FileSize)> SaveFileAsync(Guid projectId, Guid artifactId, int versionNumber, Stream fileStream, string fileName);
+    Task<Stream?> GetFileStreamAsync(string filePath);
+    Task<bool> DeleteFileAsync(string filePath);
+    Task<string> GetFilePhysicalPathAsync(string filePath);
 }

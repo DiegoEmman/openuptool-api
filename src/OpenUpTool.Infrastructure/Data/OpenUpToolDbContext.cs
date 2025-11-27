@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using OpenUpTool.Core.Entities;
 using System.Text.Json;
 
@@ -17,6 +18,86 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<Iteration> Iterations => Set<Iteration>();
     public DbSet<ArtifactType> ArtifactTypes => Set<ArtifactType>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
+    public DbSet<ArtifactVersion> ArtifactVersions => Set<ArtifactVersion>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<ProjectUserRole> ProjectUserRoles => Set<ProjectUserRole>();
+
+    public override int SaveChanges()
+    {
+        ConvertDateTimesToUtc();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ConvertDateTimesToUtc();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ConvertDateTimesToUtc()
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
+
+        foreach (var entry in entries)
+        {
+            // Setear CreatedAt y UpdatedAt automáticamente
+            if (entry.State == EntityState.Added)
+            {
+                var createdAtProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CreatedAt");
+                if (createdAtProp != null && createdAtProp.CurrentValue == null || 
+                    (createdAtProp?.CurrentValue is DateTime dt && dt == DateTime.MinValue))
+                {
+                    createdAtProp.CurrentValue = DateTime.UtcNow;
+                }
+
+                var updatedAtProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
+                if (updatedAtProp != null && updatedAtProp.CurrentValue == null || 
+                    (updatedAtProp?.CurrentValue is DateTime dt2 && dt2 == DateTime.MinValue))
+                {
+                    updatedAtProp.CurrentValue = DateTime.UtcNow;
+                }
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                var updatedAtProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UpdatedAt");
+                if (updatedAtProp != null)
+                {
+                    updatedAtProp.CurrentValue = DateTime.UtcNow;
+                }
+            }
+
+            // Convertir todos los DateTime a UTC
+            foreach (var property in entry.Properties)
+            {
+                if (property.Metadata.ClrType == typeof(DateTime))
+                {
+                    var value = (DateTime?)property.CurrentValue;
+                    if (value.HasValue && value.Value.Kind == DateTimeKind.Unspecified)
+                    {
+                        property.CurrentValue = DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
+                    }
+                    else if (value.HasValue && value.Value.Kind == DateTimeKind.Local)
+                    {
+                        property.CurrentValue = value.Value.ToUniversalTime();
+                    }
+                }
+                else if (property.Metadata.ClrType == typeof(DateTime?))
+                {
+                    var value = (DateTime?)property.CurrentValue;
+                    if (value.HasValue && value.Value.Kind == DateTimeKind.Unspecified)
+                    {
+                        property.CurrentValue = DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
+                    }
+                    else if (value.HasValue && value.Value.Kind == DateTimeKind.Local)
+                    {
+                        property.CurrentValue = value.Value.ToUniversalTime();
+                    }
+                }
+            }
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +182,7 @@ public class OpenUpToolDbContext : DbContext
                 )
                 .HasColumnType("jsonb");
             entity.Property(e => e.Version).HasColumnName("version");
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
             entity.Property(e => e.Observations).HasColumnName("observations");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
@@ -188,6 +270,108 @@ public class OpenUpToolDbContext : DbContext
                 .WithMany(p => p.Artifacts)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Roles
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("roles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        // Users
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("users");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Email).HasColumnName("email").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash").IsRequired();
+            entity.Property(e => e.FirstName).HasColumnName("first_name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).HasColumnName("last_name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.LastLoginAt).HasColumnName("last_login_at");
+
+            entity.HasIndex(e => e.Email).IsUnique();
+
+            entity.HasOne(e => e.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ArtifactVersions
+        modelBuilder.Entity<ArtifactVersion>(entity =>
+        {
+            entity.ToTable("artifact_versions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number");
+            entity.Property(e => e.FilePath).HasColumnName("file_path").HasMaxLength(500);
+            entity.Property(e => e.FileName).HasColumnName("file_name").HasMaxLength(255);
+            entity.Property(e => e.FileSize).HasColumnName("file_size");
+            entity.Property(e => e.UploadedBy).HasColumnName("uploaded_by").HasMaxLength(255);
+            entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at").HasColumnType("timestamp");
+            entity.Property(e => e.ChangeDescription).HasColumnName("change_description");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasIndex(e => new { e.ArtifactId, e.VersionNumber }).IsUnique();
+
+            entity.HasOne(e => e.Artifact)
+                .WithMany(a => a.Versions)
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ProjectUserRoles
+        modelBuilder.Entity<ProjectUserRole>(entity =>
+        {
+            entity.ToTable("project_user_roles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.InvitedBy).HasColumnName("invited_by");
+            entity.Property(e => e.InvitedAt).HasColumnName("invited_at").HasColumnType("timestamp");
+            entity.Property(e => e.AcceptedAt).HasColumnName("accepted_at").HasColumnType("timestamp");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasIndex(e => new { e.ProjectId, e.UserId, e.RoleId }).IsUnique();
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Role)
+                .WithMany()
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Inviter)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedBy)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

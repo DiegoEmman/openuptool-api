@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
@@ -6,6 +7,7 @@ namespace OpenUpTool.Api.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId}/iterations")]
+[Authorize]
 public class IterationsController : ControllerBase
 {
     private readonly IIterationService _iterationService;
@@ -39,6 +41,7 @@ public class IterationsController : ControllerBase
     /// Crea una nueva iteración
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager,Developer")]
     public async Task<ActionResult<IterationDto>> Create(Guid projectId, [FromBody] CreateIterationDto dto)
     {
         try
@@ -57,6 +60,7 @@ public class IterationsController : ControllerBase
     /// Actualiza el estado de una iteración
     /// </summary>
     [HttpPatch("{iterationId}/status")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<IterationDto>> UpdateStatus(Guid projectId, Guid iterationId, [FromBody] UpdateIterationStatusDto dto)
     {
         try

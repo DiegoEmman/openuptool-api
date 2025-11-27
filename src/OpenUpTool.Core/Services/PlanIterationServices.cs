@@ -23,10 +23,13 @@ public class ProjectPlanService : IProjectPlanService
 
     public async Task<ProjectPlanDto> CreateInitialPlanAsync(Guid projectId, CreateProjectPlanDto dto)
     {
-        var existing = await _planRepository.GetByProjectIdAsync(projectId);
-        if (existing != null)
+        // Verificar si ya existe un plan activo
+        var existingPlans = await _planRepository.GetAllVersionsByProjectIdAsync(projectId);
+        var activePlan = existingPlans.FirstOrDefault(p => p.IsActive);
+        
+        if (activePlan != null)
         {
-            throw new InvalidOperationException("Plan inicial ya existe para el proyecto");
+            throw new InvalidOperationException("Ya existe un plan activo para el proyecto. Use CreateNewPlanVersionAsync para crear una nueva versión.");
         }
 
         var plan = new ProjectPlan
@@ -38,18 +41,23 @@ public class ProjectPlanService : IProjectPlanService
             InitialSchedule = dto.InitialSchedule.Select(s => new PhaseScheduleItem
             {
                 PhaseName = s.PhaseName,
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
+                StartDate = DateTime.SpecifyKind(s.StartDate, DateTimeKind.Utc),
+                EndDate = DateTime.SpecifyKind(s.EndDate, DateTimeKind.Utc),
                 Responsible = s.Responsible?.Trim()
             }).ToList(),
             Version = 1,
+            IsActive = true,
             Observations = dto.Observations?.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
             Milestones = dto.Milestones.Select(m => new Milestone
             {
                 Id = Guid.NewGuid(),
                 Name = m.Name.Trim(),
-                Date = m.Date,
-                Description = m.Description?.Trim()
+                Date = DateTime.SpecifyKind(m.Date, DateTimeKind.Utc),
+                Description = m.Description?.Trim(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             }).ToList()
         };
 
@@ -64,6 +72,71 @@ public class ProjectPlanService : IProjectPlanService
         }
 
         return MapToDto(createdPlan);
+    }
+
+    public async Task<ProjectPlanDto> CreateNewPlanVersionAsync(Guid projectId, CreateProjectPlanDto dto)
+    {
+        // Obtener todas las versiones del proyecto
+        var existingPlans = await _planRepository.GetAllVersionsByProjectIdAsync(projectId);
+        var activePlan = existingPlans.FirstOrDefault(p => p.IsActive);
+        
+        if (activePlan == null)
+        {
+            throw new InvalidOperationException("No existe un plan activo. Use CreateInitialPlanAsync para crear v1.");
+        }
+
+        // Desactivar el plan actual
+        activePlan.IsActive = false;
+        await _planRepository.UpdateAsync(activePlan);
+
+        // Crear nueva versión
+        var maxVersion = existingPlans.Max(p => p.Version);
+        var newPlan = new ProjectPlan
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            Objectives = dto.Objectives.Trim(),
+            Scope = dto.Scope.Trim(),
+            InitialSchedule = dto.InitialSchedule.Select(s => new PhaseScheduleItem
+            {
+                PhaseName = s.PhaseName,
+                StartDate = DateTime.SpecifyKind(s.StartDate, DateTimeKind.Utc),
+                EndDate = DateTime.SpecifyKind(s.EndDate, DateTimeKind.Utc),
+                Responsible = s.Responsible?.Trim()
+            }).ToList(),
+            Version = maxVersion + 1,
+            IsActive = true,
+            Observations = dto.Observations?.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Milestones = dto.Milestones.Select(m => new Milestone
+            {
+                Id = Guid.NewGuid(),
+                Name = m.Name.Trim(),
+                Date = DateTime.SpecifyKind(m.Date, DateTimeKind.Utc),
+                Description = m.Description?.Trim(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }).ToList()
+        };
+
+        var createdPlan = await _planRepository.CreateAsync(newPlan);
+
+        // Actualizar referencia del proyecto al nuevo plan
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project != null)
+        {
+            project.PlanId = createdPlan.Id;
+            await _projectRepository.UpdateAsync(project);
+        }
+
+        return MapToDto(createdPlan);
+    }
+
+    public async Task<IEnumerable<ProjectPlanDto>> GetPlanHistoryAsync(Guid projectId)
+    {
+        var plans = await _planRepository.GetAllVersionsByProjectIdAsync(projectId);
+        return plans.OrderByDescending(p => p.Version).Select(MapToDto);
     }
 
     private static ProjectPlanDto MapToDto(ProjectPlan plan)

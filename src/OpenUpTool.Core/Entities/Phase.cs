@@ -17,5 +17,4 @@ public class Phase
 
     // Navigation properties
     public Project Project { get; set; } = null!;
-    public ICollection<Artifact> Artifacts { get; set; } = new List<Artifact>();
 }

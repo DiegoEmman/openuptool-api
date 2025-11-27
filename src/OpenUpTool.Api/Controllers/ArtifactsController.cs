@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
@@ -6,6 +7,7 @@ namespace OpenUpTool.Api.Controllers;
 
 [ApiController]
 [Route("api/artifact-types")]
+[Authorize]
 public class ArtifactTypesController : ControllerBase
 {
     private readonly IArtifactTypeService _artifactTypeService;
@@ -45,6 +47,7 @@ public class ArtifactTypesController : ControllerBase
     /// Inicializa los tipos de artefactos por defecto para Inception
     /// </summary>
     [HttpPost("seed-inception")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SeedInception()
     {
         try
@@ -62,6 +65,7 @@ public class ArtifactTypesController : ControllerBase
 
 [ApiController]
 [Route("api/projects/{projectId}/artifacts")]
+[Authorize]
 public class ArtifactsController : ControllerBase
 {
     private readonly IArtifactService _artifactService;
@@ -98,6 +102,7 @@ public class ArtifactsController : ControllerBase
     /// Crea un nuevo artefacto
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager,Developer")]
     public async Task<ActionResult<ArtifactDto>> Create(Guid projectId, [FromBody] CreateArtifactDto dto)
     {
         try
@@ -124,6 +129,7 @@ public class ArtifactsController : ControllerBase
     /// Actualiza un artefacto
     /// </summary>
     [HttpPatch("{artifactId}")]
+    [Authorize(Roles = "Admin,Manager,Developer")]
     public async Task<ActionResult<ArtifactDto>> Update(Guid projectId, Guid artifactId, [FromBody] UpdateArtifactDto dto)
     {
         try

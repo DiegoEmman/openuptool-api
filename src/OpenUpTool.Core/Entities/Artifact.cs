@@ -18,4 +18,5 @@ public class Artifact
     // Navigation properties
     public Project Project { get; set; } = null!;
     public ArtifactType ArtifactType { get; set; } = null!;
+    public ICollection<ArtifactVersion> Versions { get; set; } = new List<ArtifactVersion>();
 }

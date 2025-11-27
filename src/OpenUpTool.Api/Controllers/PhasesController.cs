@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
@@ -6,6 +7,7 @@ namespace OpenUpTool.Api.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId}/phases")]
+[Authorize]
 public class PhasesController : ControllerBase
 {
     private readonly IPhaseService _phaseService;
@@ -60,6 +62,7 @@ public class PhasesController : ControllerBase
     /// Actualiza una fase
     /// </summary>
     [HttpPatch("{phaseId}")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<PhaseDto>> Update(Guid projectId, Guid phaseId, [FromBody] UpdatePhaseDto dto)
     {
         try
@@ -81,6 +84,7 @@ public class PhasesController : ControllerBase
     /// Inicia una fase
     /// </summary>
     [HttpPost("{phaseId}/start")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<PhaseDto>> Start(Guid projectId, Guid phaseId)
     {
         try
@@ -102,6 +106,7 @@ public class PhasesController : ControllerBase
     /// Completa una fase
     /// </summary>
     [HttpPost("{phaseId}/complete")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<PhaseDto>> Complete(Guid projectId, Guid phaseId)
     {
         try

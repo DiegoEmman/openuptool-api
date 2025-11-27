@@ -9,6 +9,7 @@ public class ProjectPlan
     public List<PhaseScheduleItem> InitialSchedule { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public int Version { get; set; }
+    public bool IsActive { get; set; } = true;
     public string? Observations { get; set; }
     public DateTime UpdatedAt { get; set; }
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
@@ -6,6 +7,7 @@ namespace OpenUpTool.Api.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId}/plan")]
+[Authorize]
 public class PlansController : ControllerBase
 {
     private readonly IProjectPlanService _planService;
@@ -39,9 +41,10 @@ public class PlansController : ControllerBase
     }
 
     /// <summary>
-    /// Crea el plan inicial de un proyecto
+    /// Crea el plan inicial de un proyecto (v1)
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<ActionResult<ProjectPlanDto>> CreateInitialPlan(Guid projectId, [FromBody] CreateProjectPlanDto dto)
     {
         try
@@ -57,6 +60,47 @@ public class PlansController : ControllerBase
         {
             _logger.LogError(ex, "Error al crear plan para proyecto {ProjectId}", projectId);
             return StatusCode(500, new { message = "Error al crear plan" });
+        }
+    }
+
+    /// <summary>
+    /// Crea una nueva versión del plan (v2, v3, etc.)
+    /// </summary>
+    [HttpPost("new-version")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<ProjectPlanDto>> CreateNewVersion(Guid projectId, [FromBody] CreateProjectPlanDto dto)
+    {
+        try
+        {
+            var plan = await _planService.CreateNewPlanVersionAsync(projectId, dto);
+            return Ok(plan);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear nueva versión del plan para proyecto {ProjectId}", projectId);
+            return StatusCode(500, new { message = "Error al crear nueva versión del plan" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el historial de versiones del plan de un proyecto
+    /// </summary>
+    [HttpGet("history")]
+    public async Task<ActionResult<IEnumerable<ProjectPlanDto>>> GetHistory(Guid projectId)
+    {
+        try
+        {
+            var plans = await _planService.GetPlanHistoryAsync(projectId);
+            return Ok(plans);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener historial del plan para proyecto {ProjectId}", projectId);
+            return StatusCode(500, new { message = "Error al obtener historial del plan" });
         }
     }
 }

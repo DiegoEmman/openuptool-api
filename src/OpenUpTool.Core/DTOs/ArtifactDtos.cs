@@ -40,3 +40,21 @@ public record UpdateArtifactDto(
     string? Status,
     string? ContentText
 );
+
+public record ArtifactVersionDto(
+    Guid Id,
+    Guid ArtifactId,
+    int VersionNumber,
+    string? FilePath,
+    string? FileName,
+    long? FileSize,
+    string? UploadedBy,
+    DateTime UploadedAt,
+    string? ChangeDescription,
+    DateTime CreatedAt
+);
+
+public record CreateArtifactVersionDto(
+    string? ChangeDescription,
+    string? UploadedBy
+);
