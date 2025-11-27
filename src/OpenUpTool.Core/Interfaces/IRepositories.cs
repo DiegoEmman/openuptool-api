@@ -5,6 +5,7 @@ namespace OpenUpTool.Core.Interfaces;
 public interface IProjectRepository
 {
     Task<IEnumerable<Project>> GetAllAsync();
+    Task<IEnumerable<Project>> GetProjectsForUserAsync(Guid userId);
     Task<Project?> GetByIdAsync(Guid id);
     Task<Project> CreateAsync(Project project);
     Task<Project> UpdateAsync(Project project);

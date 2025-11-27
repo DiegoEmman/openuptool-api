@@ -22,6 +22,10 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<ProjectUserRole> ProjectUserRoles => Set<ProjectUserRole>();
+    public DbSet<UserStory> UserStories => Set<UserStory>();
+    public DbSet<IterationScope> IterationScopes => Set<IterationScope>();
+    public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     public override int SaveChanges()
     {
@@ -372,6 +376,121 @@ public class OpenUpToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.InvitedBy)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // UserStories
+        modelBuilder.Entity<UserStory>(entity =>
+        {
+            entity.ToTable("user_stories");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.AcceptanceCriteria).HasColumnName("acceptance_criteria");
+            entity.Property(e => e.Priority).HasColumnName("priority").HasMaxLength(20);
+            entity.Property(e => e.StoryPoints).HasColumnName("story_points");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Creator)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // IterationScope
+        modelBuilder.Entity<IterationScope>(entity =>
+        {
+            entity.ToTable("iteration_scope");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.IterationId).HasColumnName("iteration_id");
+            entity.Property(e => e.ItemType).HasColumnName("item_type").IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ItemId).HasColumnName("item_id");
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.EstimatedHours).HasColumnName("estimated_hours").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20);
+            entity.Property(e => e.AssignedTo).HasColumnName("assigned_to");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasIndex(e => new { e.IterationId, e.ItemType, e.ItemId }).IsUnique();
+
+            entity.HasOne(e => e.Iteration)
+                .WithMany()
+                .HasForeignKey(e => e.IterationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AssignedUser)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedTo)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ProjectInvitations
+        modelBuilder.Entity<ProjectInvitation>(entity =>
+        {
+            entity.ToTable("project_invitations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.InvitedEmail).HasColumnName("invited_email").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.InvitedBy).HasColumnName("invited_by");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20);
+            entity.Property(e => e.InvitationToken).HasColumnName("invitation_token").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").HasColumnType("timestamp");
+            entity.Property(e => e.AcceptedAt).HasColumnName("accepted_at").HasColumnType("timestamp");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasIndex(e => e.InvitationToken).IsUnique();
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Role)
+                .WithMany()
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Inviter)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedBy)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Notifications
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Type).HasColumnName("type").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Message).HasColumnName("message").IsRequired();
+            entity.Property(e => e.RelatedEntityType).HasColumnName("related_entity_type").HasMaxLength(50);
+            entity.Property(e => e.RelatedEntityId).HasColumnName("related_entity_id");
+            entity.Property(e => e.IsRead).HasColumnName("is_read");
+            entity.Property(e => e.ActionUrl).HasColumnName("action_url").HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.ReadAt).HasColumnName("read_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

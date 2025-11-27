@@ -5,8 +5,10 @@ namespace OpenUpTool.Core.Interfaces;
 public interface IProjectService
 {
     Task<IEnumerable<ProjectDto>> GetAllProjectsAsync();
+    Task<IEnumerable<ProjectDto>> GetProjectsForUserAsync(Guid userId);
     Task<ProjectDto?> GetProjectByIdAsync(Guid id);
-    Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto);
+    Task<bool> HasUserAccessAsync(Guid userId, Guid projectId);
+    Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto, Guid createdBy);
     Task<ProjectDto?> UpdateProjectAsync(Guid id, UpdateProjectDto dto);
     Task DeleteProjectAsync(Guid id);
 }

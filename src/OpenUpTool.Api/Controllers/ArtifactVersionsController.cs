@@ -4,6 +4,7 @@ using OpenUpTool.Api.Models;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Entities;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -15,17 +16,20 @@ public class ArtifactVersionsController : ControllerBase
     private readonly IFileStorageService _fileStorage;
     private readonly IArtifactVersionRepository _versionRepository;
     private readonly IArtifactRepository _artifactRepository;
+    private readonly IProjectService _projectService;
     private readonly ILogger<ArtifactVersionsController> _logger;
 
     public ArtifactVersionsController(
         IFileStorageService fileStorage,
         IArtifactVersionRepository versionRepository,
         IArtifactRepository artifactRepository,
+        IProjectService projectService,
         ILogger<ArtifactVersionsController> logger)
     {
         _fileStorage = fileStorage;
         _versionRepository = versionRepository;
         _artifactRepository = artifactRepository;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -37,6 +41,15 @@ public class ArtifactVersionsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var versions = await _versionRepository.GetByArtifactIdAsync(artifactId);
             var dtos = versions.Select(v => MapToDto(v));
             return Ok(dtos);
@@ -61,6 +74,15 @@ public class ArtifactVersionsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             // Verificar que el artefacto existe
             var artifact = await _artifactRepository.GetByIdAsync(artifactId);
             if (artifact == null)
@@ -123,6 +145,15 @@ public class ArtifactVersionsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var version = await _versionRepository.GetByIdAsync(versionId);
             if (version == null)
                 return NotFound(new { message = "Versión no encontrada" });

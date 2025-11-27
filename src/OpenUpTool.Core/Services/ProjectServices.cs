@@ -8,16 +8,27 @@ public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepository;
     private readonly IPhaseRepository _phaseRepository;
+    private readonly IProjectUserRoleRepository _projectUserRoleRepository;
 
-    public ProjectService(IProjectRepository projectRepository, IPhaseRepository phaseRepository)
+    public ProjectService(
+        IProjectRepository projectRepository, 
+        IPhaseRepository phaseRepository,
+        IProjectUserRoleRepository projectUserRoleRepository)
     {
         _projectRepository = projectRepository;
         _phaseRepository = phaseRepository;
+        _projectUserRoleRepository = projectUserRoleRepository;
     }
 
     public async Task<IEnumerable<ProjectDto>> GetAllProjectsAsync()
     {
         var projects = await _projectRepository.GetAllAsync();
+        return projects.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<ProjectDto>> GetProjectsForUserAsync(Guid userId)
+    {
+        var projects = await _projectRepository.GetProjectsForUserAsync(userId);
         return projects.Select(MapToDto);
     }
 
@@ -27,7 +38,12 @@ public class ProjectService : IProjectService
         return project == null ? null : MapToDto(project);
     }
 
-    public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto)
+    public async Task<bool> HasUserAccessAsync(Guid userId, Guid projectId)
+    {
+        return await _projectUserRoleRepository.HasUserAccessToProjectAsync(userId, projectId);
+    }
+
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto, Guid createdBy)
     {
         var project = new Project
         {
@@ -56,6 +72,24 @@ public class ProjectService : IProjectService
         };
 
         await _phaseRepository.CreateManyAsync(phases);
+
+        // Asignar al creador como Manager del proyecto
+        var managerRoleId = Guid.Parse("22222222-2222-2222-2222-222222222222"); // ID del rol Manager
+        var projectUserRole = new ProjectUserRole
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = createdProject.Id,
+            UserId = createdBy,
+            RoleId = managerRoleId,
+            InvitedBy = createdBy,
+            InvitedAt = now,
+            AcceptedAt = now,
+            Status = "active",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        await _projectUserRoleRepository.CreateAsync(projectUserRole);
 
         // Recargar el proyecto con las fases
         var projectWithPhases = await _projectRepository.GetByIdAsync(createdProject.Id);

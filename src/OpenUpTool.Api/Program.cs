@@ -72,6 +72,11 @@ public class Program
         builder.Services.AddScoped<IArtifactRepository, ArtifactRepository>();
         builder.Services.AddScoped<IArtifactTypeRepository, ArtifactTypeRepository>();
         builder.Services.AddScoped<IArtifactVersionRepository, ArtifactVersionRepository>();
+        builder.Services.AddScoped<IUserStoryRepository, UserStoryRepository>();
+        builder.Services.AddScoped<IIterationScopeRepository, IterationScopeRepository>();
+        builder.Services.AddScoped<IProjectInvitationRepository, ProjectInvitationRepository>();
+        builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+        builder.Services.AddScoped<IProjectUserRoleRepository, ProjectUserRoleRepository>();
 
         // Registrar servicios
         builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -80,6 +85,10 @@ public class Program
         builder.Services.AddScoped<IIterationService, IterationService>();
         builder.Services.AddScoped<IArtifactService, ArtifactService>();
         builder.Services.AddScoped<IArtifactTypeService, ArtifactTypeService>();
+        builder.Services.AddScoped<IUserStoryService, UserStoryService>();
+        builder.Services.AddScoped<IIterationScopeService, IterationScopeService>();
+        builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IAuthService, OpenUpTool.Infrastructure.Services.AuthService>();
         builder.Services.AddScoped<IFileStorageService>(sp =>
         {

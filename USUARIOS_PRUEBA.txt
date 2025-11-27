@@ -1,0 +1,76 @@
+====================================
+USUARIOS DE PRUEBA - OPENUPTOOL
+====================================
+
+✅ TODOS LOS USUARIOS YA ESTÁN EN LA BASE DE DATOS
+Contraseña para todos: Password123!
+Hash BCrypt: $2a$11$MCFHcsU/WBZH30BHuIaIFeXU6aauvkfnsQhK.bps5UiTP8vfntBe.
+
+ADMIN:
+------
+0. Email: admin@openuptool.com
+   Nombre: Admin Sistema
+   Contraseña: Password123!
+   Rol: Admin
+
+MANAGERS:
+---------
+1. Email: maria.gonzalez@openuptool.com
+   Nombre: María González
+   Contraseña: Password123!
+   Rol: Manager
+
+2. Email: roberto.sanchez@openuptool.com
+   Nombre: Roberto Sánchez
+   Contraseña: Password123!
+   Rol: Manager
+
+
+DEVELOPERS:
+-----------
+3. Email: carlos.ramirez@openuptool.com
+   Nombre: Carlos Ramírez
+   Contraseña: Password123!
+   Rol: Developer
+
+4. Email: ana.martinez@openuptool.com
+   Nombre: Ana Martínez
+   Contraseña: Password123!
+   Rol: Developer
+
+5. Email: luis.torres@openuptool.com
+   Nombre: Luis Torres
+   Contraseña: Password123!
+   Rol: Developer
+
+6. Email: laura.fernandez@openuptool.com
+   Nombre: Laura Fernández
+   Contraseña: Password123!
+   Rol: Developer
+
+7. Email: jorge.hernandez@openuptool.com
+   Nombre: Jorge Hernández
+   Contraseña: Password123!
+   Rol: Developer
+
+
+VIEWER:
+-------
+8. Email: patricia.lopez@openuptool.com
+   Nombre: Patricia López
+   Contraseña: Password123!
+   Rol: Viewer
+
+9. Email: viewer@openuptool.com
+   Nombre: Usuario Viewer
+   Contraseña: Password123!
+   Rol: Viewer
+
+
+====================================
+ESTADO: ✅ INSERTADOS EN BD
+====================================
+- Todos los usuarios están activos en la base de datos
+- Los hash de contraseñas están generados con BCrypt
+- Puedes invitar a cualquiera de estos usuarios para probar el sistema
+- Total: 10 usuarios (1 Admin, 2 Managers, 5 Developers, 2 Viewers)

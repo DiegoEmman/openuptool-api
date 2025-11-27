@@ -22,6 +22,22 @@ public class ProjectRepository : IProjectRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Project>> GetProjectsForUserAsync(Guid userId)
+    {
+        // Obtener proyectos donde el usuario tiene un rol asignado
+        var projectIds = await _context.ProjectUserRoles
+            .Where(pur => pur.UserId == userId && pur.Status == "active")
+            .Select(pur => pur.ProjectId)
+            .Distinct()
+            .ToListAsync();
+
+        return await _context.Projects
+            .Where(p => projectIds.Contains(p.Id))
+            .Include(p => p.Phases.OrderBy(ph => ph.OrderIndex))
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<Project?> GetByIdAsync(Guid id)
     {
         return await _context.Projects

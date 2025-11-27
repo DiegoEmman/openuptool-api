@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -11,11 +12,13 @@ namespace OpenUpTool.Api.Controllers;
 public class IterationsController : ControllerBase
 {
     private readonly IIterationService _iterationService;
+    private readonly IProjectService _projectService;
     private readonly ILogger<IterationsController> _logger;
 
-    public IterationsController(IIterationService iterationService, ILogger<IterationsController> logger)
+    public IterationsController(IIterationService iterationService, IProjectService projectService, ILogger<IterationsController> logger)
     {
         _iterationService = iterationService;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -27,6 +30,15 @@ public class IterationsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var iterations = await _iterationService.GetIterationsByProjectAsync(projectId);
             return Ok(iterations);
         }
@@ -46,6 +58,15 @@ public class IterationsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var iteration = await _iterationService.CreateIterationAsync(projectId, dto);
             return CreatedAtAction(nameof(GetByProject), new { projectId }, iteration);
         }
@@ -65,6 +86,15 @@ public class IterationsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var iteration = await _iterationService.UpdateIterationStatusAsync(iterationId, dto.Status);
             if (iteration == null)
                 return NotFound(new { message = "Iteración no encontrada" });

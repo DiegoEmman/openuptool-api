@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -69,11 +70,13 @@ public class ArtifactTypesController : ControllerBase
 public class ArtifactsController : ControllerBase
 {
     private readonly IArtifactService _artifactService;
+    private readonly IProjectService _projectService;
     private readonly ILogger<ArtifactsController> _logger;
 
-    public ArtifactsController(IArtifactService artifactService, ILogger<ArtifactsController> logger)
+    public ArtifactsController(IArtifactService artifactService, IProjectService projectService, ILogger<ArtifactsController> logger)
     {
         _artifactService = artifactService;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -85,6 +88,15 @@ public class ArtifactsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             if (string.IsNullOrEmpty(phaseId))
                 return BadRequest(new { message = "phaseId es requerido" });
 
@@ -107,6 +119,15 @@ public class ArtifactsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             // Validar que el projectId del DTO coincida con el de la ruta
             if (dto.ProjectId != projectId)
                 return BadRequest(new { message = "El projectId del cuerpo debe coincidir con el de la URL" });
@@ -134,6 +155,15 @@ public class ArtifactsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var artifact = await _artifactService.UpdateArtifactAsync(artifactId, dto);
             if (artifact == null)
                 return NotFound(new { message = "Artefacto no encontrado" });

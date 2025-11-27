@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -11,11 +12,13 @@ namespace OpenUpTool.Api.Controllers;
 public class PhasesController : ControllerBase
 {
     private readonly IPhaseService _phaseService;
+    private readonly IProjectService _projectService;
     private readonly ILogger<PhasesController> _logger;
 
-    public PhasesController(IPhaseService phaseService, ILogger<PhasesController> logger)
+    public PhasesController(IPhaseService phaseService, IProjectService projectService, ILogger<PhasesController> logger)
     {
         _phaseService = phaseService;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -27,6 +30,15 @@ public class PhasesController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var phases = await _phaseService.GetPhasesByProjectAsync(projectId);
             return Ok(phases);
         }
@@ -45,6 +57,15 @@ public class PhasesController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var phase = await _phaseService.GetPhaseByCodeAsync(projectId, phaseCode);
             if (phase == null)
                 return NotFound(new { message = "Fase no encontrada" });
@@ -67,6 +88,15 @@ public class PhasesController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var phase = await _phaseService.UpdatePhaseAsync(phaseId, dto);
             if (phase == null)
                 return NotFound(new { message = "Fase no encontrada" });
@@ -89,6 +119,15 @@ public class PhasesController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var phase = await _phaseService.StartPhaseAsync(phaseId);
             if (phase == null)
                 return NotFound(new { message = "Fase no encontrada" });
@@ -111,6 +150,15 @@ public class PhasesController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var phase = await _phaseService.CompletePhaseAsync(phaseId);
             if (phase == null)
                 return NotFound(new { message = "Fase no encontrada" });

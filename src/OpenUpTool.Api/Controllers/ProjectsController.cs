@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -20,14 +21,18 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene todos los proyectos
+    /// Obtiene todos los proyectos del usuario autenticado
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAll()
     {
         try
         {
-            var projects = await _projectService.GetAllProjectsAsync();
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var projects = await _projectService.GetProjectsForUserAsync(userId);
             return Ok(projects);
         }
         catch (Exception ex)
@@ -45,9 +50,18 @@ public class ProjectsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
             var project = await _projectService.GetProjectByIdAsync(id);
             if (project == null)
                 return NotFound(new { message = "Proyecto no encontrado" });
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, id);
+            if (!hasAccess)
+                return Forbid();
 
             return Ok(project);
         }
@@ -67,8 +81,12 @@ public class ProjectsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
             _logger.LogInformation("Creando proyecto: {ProjectName}", dto.Name);
-            var project = await _projectService.CreateProjectAsync(dto);
+            var project = await _projectService.CreateProjectAsync(dto, userId);
             _logger.LogInformation("Proyecto creado exitosamente: {ProjectId}", project.Id);
             return CreatedAtAction(nameof(GetById), new { id = project.Id }, project);
         }
@@ -88,6 +106,15 @@ public class ProjectsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, id);
+            if (!hasAccess)
+                return Forbid();
+
             var project = await _projectService.UpdateProjectAsync(id, dto);
             if (project == null)
                 return NotFound(new { message = "Proyecto no encontrado" });
@@ -110,6 +137,15 @@ public class ProjectsController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, id);
+            if (!hasAccess)
+                return Forbid();
+
             await _projectService.DeleteProjectAsync(id);
             return NoContent();
         }

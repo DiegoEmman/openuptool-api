@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
+using System.Security.Claims;
 
 namespace OpenUpTool.Api.Controllers;
 
@@ -11,11 +12,13 @@ namespace OpenUpTool.Api.Controllers;
 public class PlansController : ControllerBase
 {
     private readonly IProjectPlanService _planService;
+    private readonly IProjectService _projectService;
     private readonly ILogger<PlansController> _logger;
 
-    public PlansController(IProjectPlanService planService, ILogger<PlansController> logger)
+    public PlansController(IProjectPlanService planService, IProjectService projectService, ILogger<PlansController> logger)
     {
         _planService = planService;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -27,6 +30,15 @@ public class PlansController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var plan = await _planService.GetPlanByProjectAsync(projectId);
             if (plan == null)
                 return NotFound(new { message = "Plan no encontrado" });
@@ -49,6 +61,15 @@ public class PlansController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var plan = await _planService.CreateInitialPlanAsync(projectId, dto);
             return CreatedAtAction(nameof(GetByProject), new { projectId }, plan);
         }
@@ -72,6 +93,15 @@ public class PlansController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var plan = await _planService.CreateNewPlanVersionAsync(projectId, dto);
             return Ok(plan);
         }
@@ -94,6 +124,15 @@ public class PlansController : ControllerBase
     {
         try
         {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
             var plans = await _planService.GetPlanHistoryAsync(projectId);
             return Ok(plans);
         }
