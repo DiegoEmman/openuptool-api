@@ -23,11 +23,11 @@ dotnet test tests/OpenUpTool.Tests/OpenUpTool.Tests.csproj
 
 ## 📦 Tecnologías
 
-- **xUnit 2.9.2** - Framework de testing
-- **Moq 4.20.72** - Mocking de dependencias
-- **FluentAssertions 7.0.0** - Assertions expresivas
-- **Microsoft.AspNetCore.Mvc.Testing** - Testing de integración
-- **EntityFrameworkCore.InMemory** - Base de datos en memoria
+-   **xUnit 2.9.2** - Framework de testing
+-   **Moq 4.20.72** - Mocking de dependencias
+-   **FluentAssertions 7.0.0** - Assertions expresivas
+-   **Microsoft.AspNetCore.Mvc.Testing** - Testing de integración
+-   **EntityFrameworkCore.InMemory** - Base de datos en memoria
 
 ## 📁 Estructura
 
@@ -53,33 +53,38 @@ Para documentación detallada de todas las pruebas, patrones implementados y gu�
 ## 🧪 Cobertura
 
 ### Controllers
-- ✅ AuthController (4 tests)
-  - Login con credenciales válidas/inválidas
-  - Registro de usuarios
-  - Consulta de usuarios
-  
-- ✅ ProjectsController (5 tests)
-  - CRUD completo
-  - Control de acceso
-  - Autorización por roles
+
+-   ✅ AuthController (4 tests)
+    -   Login con credenciales válidas/inválidas
+    -   Registro de usuarios
+    -   Consulta de usuarios
+-   ✅ ProjectsController (5 tests)
+    -   CRUD completo
+    -   Control de acceso
+    -   Autorización por roles
 
 ### Services
-- ✅ ProjectService (5 tests)
-  - Consultas y filtrado
-  - Creación con fases automáticas
-  - Validación de acceso
-  - Eliminación
+
+-   ✅ ProjectService (5 tests)
+    -   Consultas y filtrado
+    -   Creación con fases automáticas
+    -   Validación de acceso
+    -   Eliminación
 
 ## 🔧 Helpers Disponibles
 
 ### TestDataSeeder
+
 Datos de prueba pre-configurados:
-- 3 roles (Admin, Manager, Developer)
-- 3 usuarios con passwords conocidos (Test123!)
-- 1 proyecto de prueba con 4 fases OpenUP
+
+-   3 roles (Admin, Manager, Developer)
+-   3 usuarios con passwords conocidos (Test123!)
+-   1 proyecto de prueba con 4 fases OpenUP
 
 ### JwtTokenHelper
+
 Generación de tokens JWT para pruebas:
+
 ```csharp
 var token = JwtTokenHelper.GenerateAdminToken();
 var token = JwtTokenHelper.GenerateManagerToken();
@@ -87,6 +92,7 @@ var token = JwtTokenHelper.GenerateDeveloperToken();
 ```
 
 ### CustomWebApplicationFactory
+
 Factory para pruebas de integración con base de datos en memoria.
 
 ## 📊 Resultados de Última Ejecución
@@ -98,21 +104,23 @@ Build succeeded in 2.0s
 
 ## 🎓 Patrones Implementados
 
-- ✅ **AAA Pattern** (Arrange-Act-Assert)
-- ✅ **Mocking** con Moq para aislar dependencias
-- ✅ **FluentAssertions** para assertions legibles
-- ✅ **Test Data Builders** con helpers
-- ✅ **Nomenclatura clara**: `MethodName_Scenario_ExpectedResult`
+-   ✅ **AAA Pattern** (Arrange-Act-Assert)
+-   ✅ **Mocking** con Moq para aislar dependencias
+-   ✅ **FluentAssertions** para assertions legibles
+-   ✅ **Test Data Builders** con helpers
+-   ✅ **Nomenclatura clara**: `MethodName_Scenario_ExpectedResult`
 
 ## 🔍 Troubleshooting
 
 ### Error: "Cannot find program"
+
 ```powershell
 # Asegúrate de estar en el directorio raíz del repositorio
 cd E:\Escritorio\openuptool-api
 ```
 
 ### Error: "Authentication failed"
+
 Verifica que `JwtTokenHelper` esté configurado con los mismos parámetros que la aplicación.
 
 ## 📝 Agregar Nuevas Pruebas
@@ -126,6 +134,7 @@ Verifica que `JwtTokenHelper` esté configurado con los mismos parámetros que l
 ## 🤝 Contribuir
 
 Al agregar nuevas funcionalidades al API:
+
 1. ✅ Crea pruebas ANTES de implementar (TDD)
 2. ✅ Asegúrate que todas las pruebas pasen
 3. ✅ Documenta pruebas complejas en TESTING_DOCUMENTATION.md
