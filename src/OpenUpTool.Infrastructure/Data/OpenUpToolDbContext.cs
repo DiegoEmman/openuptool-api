@@ -126,8 +126,8 @@ public class OpenUpToolDbContext : DbContext
                 )
                 .HasColumnType("jsonb");
             entity.Property(e => e.PlanId).HasColumnName("plan_id");
-            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp").ValueGeneratedOnAdd();
-            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp").ValueGeneratedOnAddOrUpdate();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
 
             entity.HasOne(e => e.Plan)
                 .WithOne(p => p.Project)
