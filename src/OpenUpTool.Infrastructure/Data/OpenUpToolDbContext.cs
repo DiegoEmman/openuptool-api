@@ -26,10 +26,6 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<IterationScope> IterationScopes => Set<IterationScope>();
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Notification> Notifications => Set<Notification>();
-    //HU-008
-    public DbSet<TestCase> TestCases => Set<TestCase>();
-    public DbSet<IterationLog> IterationLogs => Set<IterationLog>();
-
 
     public override int SaveChanges()
     {
@@ -320,26 +316,28 @@ public class OpenUpToolDbContext : DbContext
 
         // ArtifactVersions
         modelBuilder.Entity<ArtifactVersion>(entity =>
-{
-    entity.ToTable("artifact_versions");
-    entity.HasKey(e => e.Id);
+        {
+            entity.ToTable("artifact_versions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number");
+            entity.Property(e => e.FilePath).HasColumnName("file_path").HasMaxLength(500);
+            entity.Property(e => e.FileName).HasColumnName("file_name").HasMaxLength(255);
+            entity.Property(e => e.FileSize).HasColumnName("file_size");
+            entity.Property(e => e.UploadedBy).HasColumnName("uploaded_by").HasMaxLength(255);
+            entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at").HasColumnType("timestamp");
+            entity.Property(e => e.ChangeDescription).HasColumnName("change_description");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
 
-    entity.Property(e => e.Id).HasColumnName("id");
-    entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
-    entity.Property(e => e.VersionNumber).HasColumnName("version_number");
-    entity.Property(e => e.Date).HasColumnName("date").HasColumnType("timestamp");
-    entity.Property(e => e.AuthorId).HasColumnName("author_id");
-    entity.Property(e => e.ChangeLog).HasColumnName("change_log");
-    entity.Property(e => e.FileUrl).HasColumnName("file_url");
+            entity.HasIndex(e => new { e.ArtifactId, e.VersionNumber }).IsUnique();
 
-    entity.HasIndex(e => new { e.ArtifactId, e.VersionNumber }).IsUnique();
-
-    entity.HasOne(e => e.Artifact)
-        .WithMany(a => a.Versions)
-        .HasForeignKey(e => e.ArtifactId)
-        .OnDelete(DeleteBehavior.Cascade);
-});
-
+            entity.HasOne(e => e.Artifact)
+                .WithMany(a => a.Versions)
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         // ProjectUserRoles
         modelBuilder.Entity<ProjectUserRole>(entity =>
@@ -494,42 +492,5 @@ public class OpenUpToolDbContext : DbContext
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-        //HU-008
-        modelBuilder.Entity<TestCase>(entity =>
-    {
-            entity.ToTable("test_cases");
-            entity.HasKey(e => e.Id);
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
-            entity.Property(e => e.Description).HasColumnName("description").IsRequired();
-            entity.Property(e => e.Expected).HasColumnName("expected").IsRequired();
-            entity.Property(e => e.Result).HasColumnName("result");
-            entity.Property(e => e.EvidenceUrl).HasColumnName("evidence_url");
-
-            entity.HasOne(e => e.Artifact)
-                .WithMany(a => a.TestCases)
-                .HasForeignKey(e => e.ArtifactId)
-                .OnDelete(DeleteBehavior.Cascade);
-    });
-        modelBuilder.Entity<IterationLog>(entity =>
-    {
-            entity.ToTable("iteration_logs");
-            entity.HasKey(e => e.Id);
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
-            entity.Property(e => e.Date).HasColumnName("date").HasColumnType("timestamp");
-            entity.Property(e => e.Comments).HasColumnName("comments");
-            entity.Property(e => e.Progress).HasColumnName("progress");
-
-            entity.HasOne(e => e.Artifact)
-                .WithMany(a => a.IterationLogs)
-                .HasForeignKey(e => e.ArtifactId)
-                .OnDelete(DeleteBehavior.Cascade);
-    });
-
-
-
     }
 }
