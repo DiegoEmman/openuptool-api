@@ -160,6 +160,33 @@ VALUES
 ON CONFLICT (phase, code) DO NOTHING;
 
 -- ==============================================================================
+-- SEED DATA: Artifact Types para Elaboration
+-- ==============================================================================
+INSERT INTO artifact_types (phase, code, name, description, is_mandatory, default_format)
+VALUES
+    ('ELABORATION', 'DETAILED_USE_CASES', 'Modelo de Casos de Uso Detallado', 'Especificación completa de casos de uso con flujos principales y alternativos.', TRUE, 'TEXT'),
+    ('ELABORATION', 'DOMAIN_MODEL', 'Modelo de Dominio', 'Diagrama conceptual del dominio del problema.', TRUE, 'FILE'),
+    ('ELABORATION', 'SUPPLEMENTARY_SPEC', 'Especificación de Requerimientos Suplementarios', 'Requerimientos que no se capturan en casos de uso.', TRUE, 'TEXT'),
+    ('ELABORATION', 'NON_FUNCTIONAL_REQ', 'Requerimientos No Funcionales', 'Especificación de rendimiento, seguridad, usabilidad, etc.', TRUE, 'TEXT'),
+    ('ELABORATION', 'ARCHITECTURE_DOC', 'Documento de Arquitectura', 'Descripción de la arquitectura del sistema.', TRUE, 'MIXED'),
+    ('ELABORATION', 'TECHNICAL_DIAGRAMS', 'Diagramas Técnicos', 'Diagramas de componentes, despliegue, secuencia, etc.', FALSE, 'FILE'),
+    ('ELABORATION', 'ITERATION_PLAN', 'Plan de Iteraciones', 'Planificación detallada de iteraciones de la fase.', TRUE, 'TEXT'),
+    ('ELABORATION', 'UI_PROTOTYPE', 'Prototipo de UI', 'Mockups o prototipos de interfaz de usuario.', FALSE, 'FILE')
+ON CONFLICT (phase, code) DO NOTHING;
+
+-- ==============================================================================
+-- SEED DATA: Artifact Types para Construction
+-- ==============================================================================
+INSERT INTO artifact_types (phase, code, name, description, is_mandatory, default_format)
+VALUES
+    ('CONSTRUCTION', 'DETAILED_DESIGN_MODEL', 'Modelo de Diseño Detallado', 'Diseño completo de clases, componentes y estructura del sistema.', TRUE, 'MIXED'),
+    ('CONSTRUCTION', 'SOURCE_CODE', 'Código Fuente', 'Código fuente o enlace al repositorio con versión/build.', TRUE, 'MIXED'),
+    ('CONSTRUCTION', 'TEST_CASES', 'Casos de Prueba', 'Definición de casos de prueba con ID, pasos y criterios de aceptación.', TRUE, 'MIXED'),
+    ('CONSTRUCTION', 'TEST_RESULTS', 'Resultados de Pruebas', 'Registro de ejecución de pruebas con resultados y defectos encontrados.', TRUE, 'MIXED'),
+    ('CONSTRUCTION', 'ITERATION_LOG', 'Registro de Iteraciones', 'Actividades realizadas, decisiones tomadas y comentarios de cada iteración.', TRUE, 'MIXED')
+ON CONFLICT (phase, code) DO NOTHING;
+
+-- ==============================================================================
 -- FUNCIONES: Actualización automática de updated_at
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()

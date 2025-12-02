@@ -38,6 +38,24 @@ public interface IIterationRepository
     Task<Iteration> UpdateAsync(Iteration iteration);
 }
 
+public interface IIterationTaskRepository
+{
+    Task<IEnumerable<IterationTask>> GetByIterationIdAsync(Guid iterationId);
+    Task<IterationTask?> GetByIdAsync(Guid id);
+    Task<IterationTask> CreateAsync(IterationTask task);
+    Task<IterationTask> UpdateAsync(IterationTask task);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IIterationProgressRepository
+{
+    Task<IEnumerable<IterationProgress>> GetByIterationIdAsync(Guid iterationId);
+    Task<IterationProgress?> GetByIdAsync(Guid id);
+    Task<IterationProgress?> GetLatestByIterationIdAsync(Guid iterationId);
+    Task<IterationProgress> CreateAsync(IterationProgress progress);
+    Task<IterationProgress> UpdateAsync(IterationProgress progress);
+}
+
 public interface IArtifactRepository
 {
     Task<IEnumerable<Artifact>> GetByProjectAndPhaseAsync(Guid projectId, string phaseId);
@@ -57,9 +75,34 @@ public interface IArtifactTypeRepository
 
 public interface IArtifactVersionRepository
 {
-    Task<IEnumerable<ArtifactVersion>> GetByArtifactIdAsync(Guid artifactId);
+    Task<IEnumerable<ArtifactVersion>> GetVersionsByArtifactIdAsync(Guid artifactId);
     Task<ArtifactVersion?> GetByIdAsync(Guid id);
-    Task<ArtifactVersion> CreateAsync(ArtifactVersion version);
+    Task AddAsync(ArtifactVersion version);
     Task<ArtifactVersion> UpdateAsync(ArtifactVersion version);
+    Task DeleteAsync(Guid id);
+}
+
+public interface ITestExecutionRepository
+{
+    Task<IEnumerable<TestExecution>> GetByArtifactIdAsync(Guid artifactId);
+    Task<IEnumerable<TestExecution>> GetByTestCaseIdAsync(Guid artifactId, string testCaseId);
+    Task<TestExecution?> GetByIdAsync(Guid id);
+    Task<TestExecution> CreateAsync(TestExecution execution);
+    Task<TestExecution> UpdateAsync(TestExecution execution);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IDefectRepository
+{
+    Task<IEnumerable<Defect>> GetByProjectIdAsync(Guid projectId);
+    Task<IEnumerable<Defect>> GetByArtifactIdAsync(Guid artifactId);
+    Task<IEnumerable<Defect>> GetByTestExecutionIdAsync(Guid testExecutionId);
+    Task<IEnumerable<Defect>> GetByStatusAsync(Guid projectId, string status);
+    Task<IEnumerable<Defect>> GetByAssigneeAsync(Guid assignedTo);
+    Task<Defect?> GetByIdAsync(Guid id);
+    Task<Defect?> GetByDefectNumberAsync(Guid projectId, string defectNumber);
+    Task<string> GenerateNextDefectNumberAsync(Guid projectId);
+    Task<Defect> CreateAsync(Defect defect);
+    Task<Defect> UpdateAsync(Defect defect);
     Task DeleteAsync(Guid id);
 }

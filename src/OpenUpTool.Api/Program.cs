@@ -31,8 +31,8 @@ public class Program
         // Configurar logging - TEMPORAL: nivel Information para debug
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
-        builder.Logging.SetMinimumLevel(LogLevel.Information); // Cambiado temporalmente para debug
-        builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Error); // Solo errores de EF
+        builder.Logging.SetMinimumLevel(LogLevel.Debug); // Cambiado a Debug para ver más detalles
+        builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning); // Ver warnings de EF
         builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 
         // Configurar conexión a base de datos
@@ -69,9 +69,13 @@ public class Program
         builder.Services.AddScoped<IPhaseRepository, PhaseRepository>();
         builder.Services.AddScoped<IProjectPlanRepository, ProjectPlanRepository>();
         builder.Services.AddScoped<IIterationRepository, IterationRepository>();
+        builder.Services.AddScoped<IIterationTaskRepository, IterationTaskRepository>();
+        builder.Services.AddScoped<IIterationProgressRepository, IterationProgressRepository>();
         builder.Services.AddScoped<IArtifactRepository, ArtifactRepository>();
         builder.Services.AddScoped<IArtifactTypeRepository, ArtifactTypeRepository>();
         builder.Services.AddScoped<IArtifactVersionRepository, ArtifactVersionRepository>();
+        builder.Services.AddScoped<ITestExecutionRepository, TestExecutionRepository>();
+        builder.Services.AddScoped<IDefectRepository, DefectRepository>();
         builder.Services.AddScoped<IUserStoryRepository, UserStoryRepository>();
         builder.Services.AddScoped<IIterationScopeRepository, IterationScopeRepository>();
         builder.Services.AddScoped<IProjectInvitationRepository, ProjectInvitationRepository>();
@@ -83,8 +87,13 @@ public class Program
         builder.Services.AddScoped<IPhaseService, PhaseService>();
         builder.Services.AddScoped<IProjectPlanService, ProjectPlanService>();
         builder.Services.AddScoped<IIterationService, IterationService>();
+        builder.Services.AddScoped<IIterationTaskService, IterationTaskService>();
+        builder.Services.AddScoped<IIterationProgressService, IterationProgressService>();
         builder.Services.AddScoped<IArtifactService, ArtifactService>();
         builder.Services.AddScoped<IArtifactTypeService, ArtifactTypeService>();
+        builder.Services.AddScoped<IArtifactVersionService, ArtifactVersionService>();
+        builder.Services.AddScoped<ITestExecutionService, TestExecutionService>();
+        builder.Services.AddScoped<IDefectService, DefectService>();
         builder.Services.AddScoped<IUserStoryService, UserStoryService>();
         builder.Services.AddScoped<IIterationScopeService, IterationScopeService>();
         builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();

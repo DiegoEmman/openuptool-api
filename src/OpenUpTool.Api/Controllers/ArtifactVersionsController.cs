@@ -13,62 +13,26 @@ namespace OpenUpTool.Api.Controllers;
 [Authorize]
 public class ArtifactVersionsController : ControllerBase
 {
-    private readonly IFileStorageService _fileStorage;
-    private readonly IArtifactVersionRepository _versionRepository;
-    private readonly IArtifactRepository _artifactRepository;
+    private readonly IArtifactVersionService _versionService;
     private readonly IProjectService _projectService;
     private readonly ILogger<ArtifactVersionsController> _logger;
 
     public ArtifactVersionsController(
-        IFileStorageService fileStorage,
-        IArtifactVersionRepository versionRepository,
-        IArtifactRepository artifactRepository,
+        IArtifactVersionService versionService,
         IProjectService projectService,
         ILogger<ArtifactVersionsController> logger)
     {
-        _fileStorage = fileStorage;
-        _versionRepository = versionRepository;
-        _artifactRepository = artifactRepository;
+        _versionService = versionService;
         _projectService = projectService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Obtiene todas las versiones de un artefacto
-    /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<ArtifactVersionDto>>> GetVersions(Guid projectId, Guid artifactId)
-    {
-        try
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return Unauthorized();
-
-            // Verificar si el usuario tiene acceso a este proyecto
-            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
-            if (!hasAccess)
-                return Forbid();
-
-            var versions = await _versionRepository.GetByArtifactIdAsync(artifactId);
-            var dtos = versions.Select(v => MapToDto(v));
-            return Ok(dtos);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener versiones del artefacto {ArtifactId}", artifactId);
-            return StatusCode(500, new { message = "Error al obtener versiones" });
-        }
-    }
-
-    /// <summary>
-    /// Crea una nueva versión del artefacto con archivo
+    /// Crea una nueva versión de un artefacto
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager,Developer,Autor")]
-    [Consumes("multipart/form-data")]
     public async Task<ActionResult<ArtifactVersionDto>> CreateVersion(
-        Guid projectId,
+        Guid projectId, 
         Guid artifactId,
         [FromForm] CreateArtifactVersionRequest request)
     {
@@ -78,70 +42,44 @@ public class ArtifactVersionsController : ControllerBase
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            // Verificar si el usuario tiene acceso a este proyecto
             var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
             if (!hasAccess)
                 return Forbid();
 
-            // Verificar que el artefacto existe
-            var artifact = await _artifactRepository.GetByIdAsync(artifactId);
-            if (artifact == null)
-                return NotFound(new { message = "Artefacto no encontrado" });
+            var dto = new CreateArtifactVersionDto(
+                ChangeDescription: request.ChangeDescription,
+                UploadedBy: userId.ToString()
+            );
 
-            if (artifact.ProjectId != projectId)
-                return BadRequest(new { message = "El artefacto no pertenece al proyecto especificado" });
-
-            // Obtener el número de la siguiente versión
-            var existingVersions = await _versionRepository.GetByArtifactIdAsync(artifactId);
-            var nextVersion = existingVersions.Any() ? existingVersions.Max(v => v.VersionNumber) + 1 : 1;
-
-            // Guardar archivo si se proporciona
-            string? filePath = null;
+            Stream? fileStream = null;
             string? fileName = null;
-            long? fileSize = null;
 
-            if (request.File != null && request.File.Length > 0)
+            if (request.File != null)
             {
-                using var stream = request.File.OpenReadStream();
-                var (savedPath, savedName, savedSize) = await _fileStorage.SaveFileAsync(projectId, artifactId, nextVersion, stream, request.File.FileName);
-                filePath = savedPath;
-                fileName = savedName;
-                fileSize = savedSize;
+                fileStream = request.File.OpenReadStream();
+                fileName = request.File.FileName;
             }
 
-            // Crear entidad de versión
-            var version = new ArtifactVersion
-            {
-                Id = Guid.NewGuid(),
-                ArtifactId = artifactId,
-                VersionNumber = nextVersion,
-                FilePath = filePath,
-                FileName = fileName,
-                FileSize = fileSize,
-                UploadedBy = request.UploadedBy,
-                UploadedAt = DateTime.UtcNow,
-                ChangeDescription = request.ChangeDescription,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            var version = await _versionService.CreateVersionAsync(artifactId, dto, fileStream, fileName);
 
-            var created = await _versionRepository.CreateAsync(version);
-            _logger.LogInformation("Nueva versión {Version} creada para artefacto {ArtifactId}", nextVersion, artifactId);
-
-            return CreatedAtAction(nameof(GetVersions), new { projectId, artifactId }, MapToDto(created));
+            return Ok(version);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al crear versión del artefacto {ArtifactId}", artifactId);
-            return StatusCode(500, new { message = "Error al crear versión", error = ex.Message });
+            _logger.LogError(ex, "Error al crear versión para artefacto {ArtifactId}", artifactId);
+            return StatusCode(500, new { message = "Error al crear versión" });
         }
     }
 
     /// <summary>
-    /// Descarga el archivo de una versión específica
+    /// Obtiene el historial completo de versiones de un artefacto
     /// </summary>
-    [HttpGet("{versionId}/download")]
-    public async Task<IActionResult> DownloadFile(Guid projectId, Guid artifactId, Guid versionId)
+    [HttpGet]
+    public async Task<ActionResult<VersionHistoryDto>> GetVersionHistory(Guid projectId, Guid artifactId)
     {
         try
         {
@@ -149,32 +87,115 @@ public class ArtifactVersionsController : ControllerBase
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            // Verificar si el usuario tiene acceso a este proyecto
             var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
             if (!hasAccess)
                 return Forbid();
 
-            var version = await _versionRepository.GetByIdAsync(versionId);
+            var history = await _versionService.GetVersionHistoryAsync(artifactId);
+            return Ok(history);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener historial de versiones del artefacto {ArtifactId}", artifactId);
+            return StatusCode(500, new { message = "Error al obtener historial" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene una versión específica por su ID
+    /// </summary>
+    [HttpGet("{versionId}")]
+    public async Task<ActionResult<ArtifactVersionDto>> GetVersion(Guid projectId, Guid artifactId, Guid versionId)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var version = await _versionService.GetVersionByIdAsync(versionId);
             if (version == null)
                 return NotFound(new { message = "Versión no encontrada" });
 
             if (version.ArtifactId != artifactId)
                 return BadRequest(new { message = "La versión no pertenece al artefacto especificado" });
 
-            if (string.IsNullOrEmpty(version.FilePath))
-                return NotFound(new { message = "Esta versión no tiene archivo asociado" });
+            return Ok(version);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener versión {VersionId}", versionId);
+            return StatusCode(500, new { message = "Error al obtener versión" });
+        }
+    }
 
-            var stream = await _fileStorage.GetFileStreamAsync(version.FilePath);
+    /// <summary>
+    /// Compara dos versiones de un artefacto (metadatos)
+    /// </summary>
+    [HttpGet("compare")]
+    public async Task<ActionResult<VersionComparisonDto>> CompareVersions(
+        Guid projectId, 
+        Guid artifactId,
+        [FromQuery] Guid v1,
+        [FromQuery] Guid v2)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var comparison = await _versionService.CompareVersionsAsync(v1, v2);
+            if (comparison == null)
+                return NotFound(new { message = "Una o ambas versiones no existen" });
+
+            return Ok(comparison);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al comparar versiones {V1} y {V2}", v1, v2);
+            return StatusCode(500, new { message = "Error al comparar versiones" });
+        }
+    }
+
+    /// <summary>
+    /// Descarga el archivo de una versión específica
+    /// </summary>
+    [HttpGet("{versionId}/download")]
+    public async Task<IActionResult> DownloadVersion(Guid projectId, Guid artifactId, Guid versionId)
+    {
+        try
+        {
+            var stream = await _versionService.GetVersionFileAsync(versionId);
             if (stream == null)
-                return NotFound(new { message = "Archivo no encontrado en el servidor" });
+                return NotFound($"Archivo de versión {versionId} no encontrado");
 
-            var contentType = GetContentType(version.FileName ?? "file");
-            return File(stream, contentType, version.FileName ?? $"artifact_v{version.VersionNumber}");
+            var version = await _versionService.GetVersionByIdAsync(versionId);
+            if (version == null)
+                return NotFound($"Versión {versionId} no encontrada");
+
+            return File(stream, "application/octet-stream", version.FileName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al descargar archivo de versión {VersionId}", versionId);
-            return StatusCode(500, new { message = "Error al descargar archivo" });
+            return StatusCode(500, new { message = "Error al descargar archivo", error = ex.Message });
         }
     }
 

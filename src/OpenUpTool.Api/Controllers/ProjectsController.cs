@@ -12,11 +12,16 @@ namespace OpenUpTool.Api.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
+    private readonly IIterationProgressService _progressService;
     private readonly ILogger<ProjectsController> _logger;
 
-    public ProjectsController(IProjectService projectService, ILogger<ProjectsController> logger)
+    public ProjectsController(
+        IProjectService projectService,
+        IIterationProgressService progressService,
+        ILogger<ProjectsController> logger)
     {
         _projectService = projectService;
+        _progressService = progressService;
         _logger = logger;
     }
 
@@ -153,6 +158,36 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogError(ex, "Error al eliminar proyecto {ProjectId}", id);
             return StatusCode(500, new { message = "Error al eliminar proyecto" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el dashboard del proyecto con el avance total y por fase
+    /// </summary>
+    [HttpGet("{id}/dashboard")]
+    public async Task<ActionResult<ProjectDashboardDto>> GetDashboard(Guid id)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Verificar si el usuario tiene acceso a este proyecto
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, id);
+            if (!hasAccess)
+                return Forbid();
+
+            var dashboard = await _progressService.GetProjectDashboardAsync(id);
+            if (dashboard == null)
+                return NotFound(new { message = "Proyecto no encontrado" });
+
+            return Ok(dashboard);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener dashboard del proyecto {ProjectId}", id);
+            return StatusCode(500, new { message = "Error al obtener dashboard" });
         }
     }
 }

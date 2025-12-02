@@ -13,6 +13,23 @@ public class Artifact
     public string Status { get; set; } = "Pendiente"; // Pendiente, En revisión, Aprobado
     public bool IsMandatory { get; set; }
     public string? ContentText { get; set; }
+    
+    // Campos para archivos adjuntos
+    public string? FilePath { get; set; } // Ruta física del archivo en el servidor
+    public string? FileName { get; set; } // Nombre original del archivo
+    public long? FileSize { get; set; } // Tamaño en bytes
+    public string? MimeType { get; set; } // Tipo MIME del archivo (image/png, application/pdf, etc.)
+    public string? FileCategory { get; set; } // DIAGRAM, PROTOTYPE, DOCUMENT, etc.
+    
+    // Campos para código fuente y repositorio
+    public string? RepositoryUrl { get; set; } // URL del repositorio (GitHub, GitLab, etc.)
+    public string? RepositoryVersion { get; set; } // Tag, commit, branch
+    public string? BuildNumber { get; set; } // Número de build asociado
+    
+    // Campos estructurados para pruebas e iteraciones (almacenados como JSON)
+    public string? TestData { get; set; } // JSON: { testCases: [], results: [] }
+    public string? IterationData { get; set; } // JSON: { activities: [], comments: [] }
+    
     public DateTime UpdatedAt { get; set; }
 
     // Navigation properties

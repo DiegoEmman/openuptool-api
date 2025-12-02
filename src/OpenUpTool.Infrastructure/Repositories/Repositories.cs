@@ -230,6 +230,7 @@ public class ArtifactRepository : IArtifactRepository
     {
         return await _context.Artifacts
             .Include(a => a.ArtifactType)
+            .Include(a => a.Versions)
             .Where(a => a.ProjectId == projectId && a.PhaseId == phaseId)
             .OrderBy(a => a.CreatedAt)
             .ToListAsync();
@@ -313,7 +314,7 @@ public class ArtifactVersionRepository : IArtifactVersionRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<ArtifactVersion>> GetByArtifactIdAsync(Guid artifactId)
+    public async Task<IEnumerable<ArtifactVersion>> GetVersionsByArtifactIdAsync(Guid artifactId)
     {
         return await _context.ArtifactVersions
             .Where(v => v.ArtifactId == artifactId)
@@ -326,13 +327,12 @@ public class ArtifactVersionRepository : IArtifactVersionRepository
         return await _context.ArtifactVersions.FindAsync(id);
     }
 
-    public async Task<ArtifactVersion> CreateAsync(ArtifactVersion version)
+    public async Task AddAsync(ArtifactVersion version)
     {
         version.CreatedAt = DateTime.UtcNow;
         version.UpdatedAt = DateTime.UtcNow;
         _context.ArtifactVersions.Add(version);
         await _context.SaveChangesAsync();
-        return version;
     }
 
     public async Task<ArtifactVersion> UpdateAsync(ArtifactVersion version)
@@ -353,3 +353,206 @@ public class ArtifactVersionRepository : IArtifactVersionRepository
         }
     }
 }
+
+public class TestExecutionRepository : ITestExecutionRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public TestExecutionRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<TestExecution>> GetByArtifactIdAsync(Guid artifactId)
+    {
+        return await _context.TestExecutions
+            .Include(te => te.Artifact)
+            .Include(te => te.ArtifactVersion)
+            .Include(te => te.RelatedDefects)
+            .Where(te => te.ArtifactId == artifactId)
+            .OrderByDescending(te => te.ExecutedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<TestExecution>> GetByTestCaseIdAsync(Guid artifactId, string testCaseId)
+    {
+        return await _context.TestExecutions
+            .Include(te => te.Artifact)
+            .Include(te => te.ArtifactVersion)
+            .Include(te => te.RelatedDefects)
+            .Where(te => te.ArtifactId == artifactId && te.TestCaseId == testCaseId)
+            .OrderByDescending(te => te.ExecutedAt)
+            .ToListAsync();
+    }
+
+    public async Task<TestExecution?> GetByIdAsync(Guid id)
+    {
+        return await _context.TestExecutions
+            .Include(te => te.Artifact)
+            .Include(te => te.ArtifactVersion)
+            .Include(te => te.RelatedDefects)
+            .FirstOrDefaultAsync(te => te.Id == id);
+    }
+
+    public async Task<TestExecution> CreateAsync(TestExecution testExecution)
+    {
+        _context.TestExecutions.Add(testExecution);
+        await _context.SaveChangesAsync();
+        return testExecution;
+    }
+
+    public async Task<TestExecution> UpdateAsync(TestExecution testExecution)
+    {
+        _context.TestExecutions.Update(testExecution);
+        await _context.SaveChangesAsync();
+        return testExecution;
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var execution = await _context.TestExecutions.FindAsync(id);
+        if (execution != null)
+        {
+            _context.TestExecutions.Remove(execution);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+
+public class DefectRepository : IDefectRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public DefectRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<Defect>> GetByProjectIdAsync(Guid projectId)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .Where(d => d.ProjectId == projectId)
+            .OrderByDescending(d => d.ReportedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Defect>> GetByArtifactIdAsync(Guid artifactId)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .Where(d => d.ArtifactId == artifactId)
+            .OrderByDescending(d => d.ReportedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Defect>> GetByTestExecutionIdAsync(Guid testExecutionId)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .Where(d => d.TestExecutionId == testExecutionId)
+            .OrderByDescending(d => d.ReportedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Defect>> GetByStatusAsync(Guid projectId, string status)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .Where(d => d.ProjectId == projectId && d.Status == status)
+            .OrderByDescending(d => d.ReportedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Defect>> GetByAssigneeAsync(Guid assigneeId)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .Where(d => d.AssignedTo == assigneeId)
+            .OrderByDescending(d => d.ReportedAt)
+            .ToListAsync();
+    }
+
+    public async Task<Defect?> GetByIdAsync(Guid id)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .FirstOrDefaultAsync(d => d.Id == id);
+    }
+
+    public async Task<Defect?> GetByDefectNumberAsync(Guid projectId, string defectNumber)
+    {
+        return await _context.Defects
+            .Include(d => d.Project)
+            .Include(d => d.Artifact)
+            .Include(d => d.ArtifactVersion)
+            .Include(d => d.TestExecution)
+            .FirstOrDefaultAsync(d => d.ProjectId == projectId && d.DefectNumber == defectNumber);
+    }
+
+    public async Task<string> GenerateNextDefectNumberAsync(Guid projectId)
+    {
+        var lastDefect = await _context.Defects
+            .Where(d => d.ProjectId == projectId)
+            .OrderByDescending(d => d.DefectNumber)
+            .FirstOrDefaultAsync();
+
+        if (lastDefect == null)
+        {
+            return "DEF-001";
+        }
+
+        // Extract number from format DEF-XXX
+        var parts = lastDefect.DefectNumber.Split('-');
+        if (parts.Length == 2 && int.TryParse(parts[1], out int lastNumber))
+        {
+            var nextNumber = lastNumber + 1;
+            return $"DEF-{nextNumber:D3}";
+        }
+
+        return "DEF-001";
+    }
+
+    public async Task<Defect> CreateAsync(Defect defect)
+    {
+        _context.Defects.Add(defect);
+        await _context.SaveChangesAsync();
+        return defect;
+    }
+
+    public async Task<Defect> UpdateAsync(Defect defect)
+    {
+        _context.Defects.Update(defect);
+        await _context.SaveChangesAsync();
+        return defect;
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var defect = await _context.Defects.FindAsync(id);
+        if (defect != null)
+        {
+            _context.Defects.Remove(defect);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+

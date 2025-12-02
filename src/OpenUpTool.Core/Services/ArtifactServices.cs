@@ -1,6 +1,7 @@
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Entities;
 using OpenUpTool.Core.Interfaces;
+using System.Text.Json;
 
 namespace OpenUpTool.Core.Services;
 
@@ -8,11 +9,16 @@ public class ArtifactService : IArtifactService
 {
     private readonly IArtifactRepository _artifactRepository;
     private readonly IArtifactTypeRepository _artifactTypeRepository;
+    private readonly IFileStorageService _fileStorageService;
 
-    public ArtifactService(IArtifactRepository artifactRepository, IArtifactTypeRepository artifactTypeRepository)
+    public ArtifactService(
+        IArtifactRepository artifactRepository, 
+        IArtifactTypeRepository artifactTypeRepository,
+        IFileStorageService fileStorageService)
     {
         _artifactRepository = artifactRepository;
         _artifactTypeRepository = artifactTypeRepository;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<IEnumerable<ArtifactDto>> GetArtifactsByProjectAndPhaseAsync(Guid projectId, string phaseId)
@@ -21,7 +27,7 @@ public class ArtifactService : IArtifactService
         return artifacts.Select(MapToDto);
     }
 
-    public async Task<ArtifactDto> CreateArtifactAsync(CreateArtifactDto dto)
+    public async Task<ArtifactDto> CreateArtifactAsync(CreateArtifactDto dto, Stream? fileStream = null, string? fileName = null)
     {
         var artifactType = await _artifactTypeRepository.GetByIdAsync(dto.ArtifactTypeId);
         if (artifactType == null)
@@ -44,16 +50,37 @@ public class ArtifactService : IArtifactService
             Description = dto.Description?.Trim(),
             Author = dto.Author?.Trim(),
             Status = "Pendiente",
-            IsMandatory = artifactType.IsMandatory,
-            ContentText = artifactType.DefaultFormat == "TEXT" ? "" : null
+            IsMandatory = dto.IsMandatory,
+            ContentText = dto.ContentText,
+            FileCategory = dto.FileCategory,
+            RepositoryUrl = dto.RepositoryUrl?.Trim(),
+            RepositoryVersion = dto.RepositoryVersion?.Trim(),
+            BuildNumber = dto.BuildNumber?.Trim()
         };
+
+        // Si hay archivo adjunto, guardarlo
+        if (fileStream != null && fileName != null && dto.FileCategory != null)
+        {
+            if (!_fileStorageService.IsValidFileFormat(fileName, dto.FileCategory))
+            {
+                throw new InvalidOperationException($"Formato de archivo no permitido para categoría {dto.FileCategory}");
+            }
+
+            var (filePath, savedFileName, fileSize) = await _fileStorageService.SaveFileAsync(
+                dto.ProjectId, artifact.Id, fileStream, fileName, dto.FileCategory);
+
+            artifact.FilePath = filePath;
+            artifact.FileName = savedFileName;
+            artifact.FileSize = fileSize;
+            artifact.MimeType = GetMimeType(fileName);
+        }
 
         var created = await _artifactRepository.CreateAsync(artifact);
         created.ArtifactType = artifactType;
         return MapToDto(created);
     }
 
-    public async Task<ArtifactDto?> UpdateArtifactAsync(Guid id, UpdateArtifactDto dto)
+    public async Task<ArtifactDto?> UpdateArtifactAsync(Guid id, UpdateArtifactDto dto, Stream? fileStream = null, string? fileName = null)
     {
         var artifact = await _artifactRepository.GetByIdAsync(id);
         if (artifact == null) return null;
@@ -62,14 +89,219 @@ public class ArtifactService : IArtifactService
         if (dto.Description != null) artifact.Description = dto.Description.Trim();
         if (dto.Author != null) artifact.Author = dto.Author.Trim();
         if (dto.Status != null) artifact.Status = dto.Status;
+        if (dto.IsMandatory.HasValue) artifact.IsMandatory = dto.IsMandatory.Value;
         if (dto.ContentText != null) artifact.ContentText = dto.ContentText;
+        if (dto.FileCategory != null) artifact.FileCategory = dto.FileCategory;
+        if (dto.RepositoryUrl != null) artifact.RepositoryUrl = dto.RepositoryUrl.Trim();
+        if (dto.RepositoryVersion != null) artifact.RepositoryVersion = dto.RepositoryVersion.Trim();
+        if (dto.BuildNumber != null) artifact.BuildNumber = dto.BuildNumber.Trim();
+
+        // Si hay nuevo archivo, eliminar el anterior y guardar el nuevo
+        if (fileStream != null && fileName != null && dto.FileCategory != null)
+        {
+            if (!_fileStorageService.IsValidFileFormat(fileName, dto.FileCategory))
+            {
+                throw new InvalidOperationException($"Formato de archivo no permitido para categoría {dto.FileCategory}");
+            }
+
+            // Eliminar archivo anterior si existe
+            if (!string.IsNullOrEmpty(artifact.FilePath))
+            {
+                await _fileStorageService.DeleteFileAsync(artifact.FilePath);
+            }
+
+            var (filePath, savedFileName, fileSize) = await _fileStorageService.SaveFileAsync(
+                artifact.ProjectId, artifact.Id, fileStream, fileName, dto.FileCategory);
+
+            artifact.FilePath = filePath;
+            artifact.FileName = savedFileName;
+            artifact.FileSize = fileSize;
+            artifact.MimeType = GetMimeType(fileName);
+        }
 
         var updated = await _artifactRepository.UpdateAsync(artifact);
         return MapToDto(updated);
     }
 
+    public async Task<Stream?> GetArtifactFileAsync(Guid artifactId)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null || string.IsNullOrEmpty(artifact.FilePath))
+            return null;
+
+        return await _fileStorageService.GetFileStreamAsync(artifact.FilePath);
+    }
+
+    public Task<List<AllowedFileFormatsDto>> GetAllowedFileFormatsAsync()
+    {
+        var formats = new List<AllowedFileFormatsDto>
+        {
+            new AllowedFileFormatsDto(
+                "DIAGRAM",
+                new List<string> { ".png", ".svg", ".pdf", ".jpg", ".jpeg" },
+                new List<string> { "image/png", "image/svg+xml", "application/pdf", "image/jpeg" },
+                10 * 1024 * 1024 // 10 MB
+            ),
+            new AllowedFileFormatsDto(
+                "PROTOTYPE",
+                new List<string> { ".png", ".jpg", ".jpeg", ".gif", ".pdf" },
+                new List<string> { "image/png", "image/jpeg", "image/gif", "application/pdf" },
+                15 * 1024 * 1024 // 15 MB
+            ),
+            new AllowedFileFormatsDto(
+                "DOCUMENT",
+                new List<string> { ".pdf", ".docx", ".doc", ".txt" },
+                new List<string> { "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword", "text/plain" },
+                20 * 1024 * 1024 // 20 MB
+            )
+        };
+
+        return Task.FromResult(formats);
+    }
+
+    public async Task<ArtifactDto?> LinkRepositoryAsync(Guid artifactId, LinkRepositoryRequest request)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null) return null;
+
+        // Validar URL
+        if (!Uri.TryCreate(request.RepositoryUrl, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException("URL de repositorio inválida");
+        }
+
+        artifact.RepositoryUrl = request.RepositoryUrl.Trim();
+        artifact.RepositoryVersion = request.RepositoryVersion?.Trim();
+        artifact.BuildNumber = request.BuildNumber?.Trim();
+
+        var updated = await _artifactRepository.UpdateAsync(artifact);
+        return MapToDto(updated);
+    }
+
+    public async Task<ArtifactDto?> AddTestCaseAsync(Guid artifactId, AddTestCaseRequest request)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null) return null;
+
+        var testData = string.IsNullOrEmpty(artifact.TestData)
+            ? new TestDataJson { TestCases = new List<TestCaseDto>(), TestResults = new List<TestResultDto>() }
+            : JsonSerializer.Deserialize<TestDataJson>(artifact.TestData) ?? new TestDataJson { TestCases = new List<TestCaseDto>(), TestResults = new List<TestResultDto>() };
+
+        var newTestCase = new TestCaseDto(
+            request.TestId,
+            request.Title,
+            request.Description,
+            request.Steps,
+            request.ExpectedResult,
+            request.Priority,
+            DateTime.UtcNow
+        );
+
+        testData.TestCases ??= new List<TestCaseDto>();
+        testData.TestCases.Add(newTestCase);
+
+        artifact.TestData = JsonSerializer.Serialize(testData);
+        var updated = await _artifactRepository.UpdateAsync(artifact);
+        return MapToDto(updated);
+    }
+
+    public async Task<ArtifactDto?> AddTestResultAsync(Guid artifactId, AddTestResultRequest request)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null) return null;
+
+        var testData = string.IsNullOrEmpty(artifact.TestData)
+            ? new TestDataJson { TestCases = new List<TestCaseDto>(), TestResults = new List<TestResultDto>() }
+            : JsonSerializer.Deserialize<TestDataJson>(artifact.TestData) ?? new TestDataJson { TestCases = new List<TestCaseDto>(), TestResults = new List<TestResultDto>() };
+
+        var newResult = new TestResultDto(
+            request.TestCaseId,
+            request.Result,
+            request.ExecutedBy,
+            DateTime.UtcNow,
+            request.Notes,
+            request.Defects
+        );
+
+        testData.TestResults ??= new List<TestResultDto>();
+        testData.TestResults.Add(newResult);
+
+        artifact.TestData = JsonSerializer.Serialize(testData);
+        var updated = await _artifactRepository.UpdateAsync(artifact);
+        return MapToDto(updated);
+    }
+
+    public async Task<ArtifactDto?> AddIterationActivityAsync(Guid artifactId, AddIterationActivityRequest request)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null) return null;
+
+        var iterationData = string.IsNullOrEmpty(artifact.IterationData)
+            ? new IterationDataJson { Activities = new List<IterationActivityDto>() }
+            : JsonSerializer.Deserialize<IterationDataJson>(artifact.IterationData) ?? new IterationDataJson { Activities = new List<IterationActivityDto>() };
+
+        var newActivity = new IterationActivityDto(
+            Guid.NewGuid().ToString(),
+            request.Type,
+            request.Description,
+            request.Participants,
+            DateTime.UtcNow,
+            request.Tags
+        );
+
+        iterationData.Activities ??= new List<IterationActivityDto>();
+        iterationData.Activities.Add(newActivity);
+
+        artifact.IterationData = JsonSerializer.Serialize(iterationData);
+        var updated = await _artifactRepository.UpdateAsync(artifact);
+        return MapToDto(updated);
+    }
+
+    private static string GetMimeType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".pdf" => "application/pdf",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".doc" => "application/msword",
+            ".txt" => "text/plain",
+            _ => "application/octet-stream"
+        };
+    }
+
     private static ArtifactDto MapToDto(Artifact artifact)
     {
+        // Deserializar datos estructurados de JSON
+        List<TestCaseDto>? testCases = null;
+        List<TestResultDto>? testResults = null;
+        List<IterationActivityDto>? iterationActivities = null;
+
+        if (!string.IsNullOrEmpty(artifact.TestData))
+        {
+            try
+            {
+                var testData = JsonSerializer.Deserialize<TestDataJson>(artifact.TestData);
+                testCases = testData?.TestCases;
+                testResults = testData?.TestResults;
+            }
+            catch { /* Ignore deserialization errors */ }
+        }
+
+        if (!string.IsNullOrEmpty(artifact.IterationData))
+        {
+            try
+            {
+                var iterationData = JsonSerializer.Deserialize<IterationDataJson>(artifact.IterationData);
+                iterationActivities = iterationData?.Activities;
+            }
+            catch { /* Ignore deserialization errors */ }
+        }
+
         return new ArtifactDto(
             artifact.Id,
             artifact.ProjectId,
@@ -81,8 +313,74 @@ public class ArtifactService : IArtifactService
             artifact.CreatedAt,
             artifact.Status,
             artifact.IsMandatory,
-            artifact.ContentText
+            artifact.ContentText,
+            artifact.FilePath,
+            artifact.FileName,
+            artifact.FileSize,
+            artifact.MimeType,
+            artifact.FileCategory,
+            artifact.RepositoryUrl,
+            artifact.RepositoryVersion,
+            artifact.BuildNumber,
+            testCases,
+            testResults,
+            iterationActivities
         );
+    }
+
+    public async Task<PhaseValidationDto> ValidatePhaseCompletionAsync(Guid projectId, string phaseId)
+    {
+        // Obtener todos los artefactos de la fase
+        var artifacts = await _artifactRepository.GetByProjectAndPhaseAsync(projectId, phaseId);
+        
+        // Filtrar solo los obligatorios
+        var mandatoryArtifacts = artifacts.Where(a => a.IsMandatory).ToList();
+        
+        // Lista para artefactos incompletos
+        var missingArtifacts = new List<MissingArtifactDto>();
+
+        foreach (var artifact in mandatoryArtifacts)
+        {
+            // Un artefacto obligatorio está completo si tiene al menos una versión
+            var hasVersions = artifact.Versions != null && artifact.Versions.Any();
+            
+            if (!hasVersions)
+            {
+                missingArtifacts.Add(new MissingArtifactDto(
+                    ArtifactId: artifact.Id,
+                    Title: artifact.Title,
+                    ArtifactType: artifact.ArtifactType?.Name ?? "Desconocido",
+                    Status: artifact.Status,
+                    HasVersions: false
+                ));
+            }
+        }
+
+        var canAdvance = missingArtifacts.Count == 0;
+        var message = canAdvance 
+            ? "Todos los artefactos obligatorios están completos. El proyecto puede avanzar a la siguiente fase."
+            : $"Faltan {missingArtifacts.Count} artefacto(s) obligatorio(s) por completar.";
+
+        return new PhaseValidationDto(
+            CanAdvance: canAdvance,
+            Phase: phaseId,
+            TotalMandatoryArtifacts: mandatoryArtifacts.Count,
+            CompletedMandatoryArtifacts: mandatoryArtifacts.Count - missingArtifacts.Count,
+            MissingArtifacts: missingArtifacts,
+            Message: message
+        );
+    }
+
+    // Clases auxiliares para serialización JSON
+    private class TestDataJson
+    {
+        public List<TestCaseDto>? TestCases { get; set; }
+        public List<TestResultDto>? TestResults { get; set; }
+    }
+
+    private class IterationDataJson
+    {
+        public List<IterationActivityDto>? Activities { get; set; }
     }
 }
 

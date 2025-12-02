@@ -18,6 +18,7 @@ namespace OpenUpTool.Tests.Controllers;
 public class ProjectsControllerTests
 {
     private readonly Mock<IProjectService> _projectServiceMock;
+    private readonly Mock<IIterationProgressService> _progressServiceMock;
     private readonly Mock<ILogger<ProjectsController>> _loggerMock;
     private readonly ProjectsController _controller;
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -25,8 +26,12 @@ public class ProjectsControllerTests
     public ProjectsControllerTests()
     {
         _projectServiceMock = new Mock<IProjectService>();
+        _progressServiceMock = new Mock<IIterationProgressService>();
         _loggerMock = new Mock<ILogger<ProjectsController>>();
-        _controller = new ProjectsController(_projectServiceMock.Object, _loggerMock.Object);
+        _controller = new ProjectsController(
+            _projectServiceMock.Object, 
+            _progressServiceMock.Object,
+            _loggerMock.Object);
 
         SetupAuthenticatedUser();
     }
