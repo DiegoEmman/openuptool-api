@@ -86,7 +86,7 @@ public class IterationProgressRepository : IIterationProgressRepository
     {
         return await _context.IterationProgresses
             .Where(p => p.IterationId == iterationId)
-            .OrderByDescending(p => p.RecordDate)
+            .OrderByDescending(p => p.CreatedAt)
             .FirstOrDefaultAsync();
     }
 

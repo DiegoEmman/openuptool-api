@@ -51,9 +51,13 @@ public class DatabaseManagementController : ControllerBase
                     "ProjectPlans",
                     "Milestones",
                     "Iterations",
+                    "IterationTasks",
+                    "IterationProgress",
                     "ArtifactTypes",
                     "Artifacts",
                     "ArtifactVersions",
+                    "TestExecutions",
+                    "Defects",
                     "UserStories",
                     "IterationScope",
                     "ProjectUserRoles",
@@ -951,7 +955,346 @@ public class DatabaseManagementController : ControllerBase
             await _context.SaveChangesAsync();
             _logger.LogInformation("✅ Versiones de artefactos creadas");
 
-            // 15. Crear notificaciones de ejemplo
+            // 15. Crear tareas de iteración
+            var iterationTasks = new[]
+            {
+                new IterationTask
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = elaborationPhase != null ? await _context.Iterations.Where(i => i.ProjectId == projects[0].Id).Select(i => i.Id).FirstOrDefaultAsync() : Guid.NewGuid(),
+                    Name = "Diseñar base de datos",
+                    Description = "Crear el modelo de datos y definir las tablas principales",
+                    Status = "Completada",
+                    EstimatedHours = 8,
+                    ActualHours = 7.5m,
+                    AssignedTo = users[3].Id, // Carlos Ramírez
+                    StartDate = now.AddDays(-6),
+                    EndDate = now.AddDays(-5),
+                    Priority = 1,
+                    CreatedAt = now.AddDays(-7),
+                    UpdatedAt = now.AddDays(-5)
+                },
+                new IterationTask
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = elaborationPhase != null ? await _context.Iterations.Where(i => i.ProjectId == projects[0].Id).Select(i => i.Id).FirstOrDefaultAsync() : Guid.NewGuid(),
+                    Name = "Implementar autenticación",
+                    Description = "Desarrollar sistema de login con JWT",
+                    Status = "En Progreso",
+                    EstimatedHours = 12,
+                    ActualHours = 8,
+                    AssignedTo = users[4].Id, // Ana Martínez
+                    StartDate = now.AddDays(-4),
+                    Priority = 1,
+                    CreatedAt = now.AddDays(-5),
+                    UpdatedAt = now
+                },
+                new IterationTask
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = elaborationPhase != null ? await _context.Iterations.Where(i => i.ProjectId == projects[0].Id).Select(i => i.Id).FirstOrDefaultAsync() : Guid.NewGuid(),
+                    Name = "Crear componentes de UI",
+                    Description = "Desarrollar los componentes base del frontend",
+                    Status = "Pendiente",
+                    EstimatedHours = 16,
+                    AssignedTo = users[5].Id, // Luis Torres
+                    Priority = 2,
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now
+                },
+                new IterationTask
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = elaborationPhase != null ? await _context.Iterations.Where(i => i.ProjectId == projects[0].Id).Select(i => i.Id).FirstOrDefaultAsync() : Guid.NewGuid(),
+                    Name = "Configurar CI/CD",
+                    Description = "Implementar pipeline de integración continua",
+                    Status = "Bloqueada",
+                    EstimatedHours = 6,
+                    AssignedTo = users[3].Id, // Carlos Ramírez
+                    Priority = 3,
+                    BlockerDescription = "Esperando acceso al servidor de CI/CD",
+                    CreatedAt = now.AddDays(-2),
+                    UpdatedAt = now
+                }
+            };
+            await _context.IterationTasks.AddRangeAsync(iterationTasks);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Tareas de iteración creadas");
+
+            // 16. Crear registros de progreso de iteración
+            if (elaborationPhase != null)
+            {
+                var iterationId = await _context.Iterations
+                    .Where(i => i.ProjectId == projects[0].Id && i.Status == "En curso")
+                    .Select(i => i.Id)
+                    .FirstOrDefaultAsync();
+
+                if (iterationId != Guid.Empty)
+                {
+                    var iterationProgress = new[]
+                    {
+                        new IterationProgress
+                        {
+                            Id = Guid.NewGuid(),
+                            IterationId = iterationId,
+                            RecordDate = now.AddDays(-7),
+                            CompletionPercentage = 10,
+                            TotalTasks = 4,
+                            CompletedTasks = 0,
+                            InProgressTasks = 1,
+                            BlockedTasks = 0,
+                            Observations = "Inicio de iteración, tareas asignadas",
+                            CreatedAt = now.AddDays(-7),
+                            UpdatedAt = now.AddDays(-7)
+                        },
+                        new IterationProgress
+                        {
+                            Id = Guid.NewGuid(),
+                            IterationId = iterationId,
+                            RecordDate = now.AddDays(-4),
+                            CompletionPercentage = 35,
+                            TotalTasks = 4,
+                            CompletedTasks = 1,
+                            InProgressTasks = 2,
+                            BlockedTasks = 0,
+                            Observations = "Diseño de BD completado. Auth y UI en progreso",
+                            CreatedAt = now.AddDays(-4),
+                            UpdatedAt = now.AddDays(-4)
+                        },
+                        new IterationProgress
+                        {
+                            Id = Guid.NewGuid(),
+                            IterationId = iterationId,
+                            RecordDate = now,
+                            CompletionPercentage = 50,
+                            TotalTasks = 4,
+                            CompletedTasks = 1,
+                            InProgressTasks = 1,
+                            BlockedTasks = 1,
+                            Blockers = "Tarea de CI/CD bloqueada por falta de acceso al servidor",
+                            Observations = "Buen avance general. Necesitamos resolver el bloqueo de CI/CD",
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        }
+                    };
+                    await _context.IterationProgresses.AddRangeAsync(iterationProgress);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("✅ Progreso de iteración registrado");
+                }
+            }
+
+            // 17. Crear test executions
+            var testExecutions = new[]
+            {
+                new TestExecution
+                {
+                    Id = Guid.NewGuid(),
+                    ArtifactId = artifacts[1].Id, // Casos de Uso SGE
+                    TestCaseId = "TC-001",
+                    TestCaseName = "Validar login con credenciales correctas",
+                    Result = "Passed",
+                    ExecutedBy = users[8].Id, // Patricia López (Tester)
+                    ExecutedAt = now.AddDays(-2),
+                    DurationSeconds = 45,
+                    ArtifactVersionId = artifactVersions[4].Id,
+                    Environment = "Windows 11, Chrome 120",
+                    Notes = "Prueba exitosa. Login funciona correctamente.",
+                    CreatedAt = now.AddDays(-2),
+                    UpdatedAt = now.AddDays(-2)
+                },
+                new TestExecution
+                {
+                    Id = Guid.NewGuid(),
+                    ArtifactId = artifacts[1].Id,
+                    TestCaseId = "TC-002",
+                    TestCaseName = "Validar login con credenciales incorrectas",
+                    Result = "Passed",
+                    ExecutedBy = users[8].Id,
+                    ExecutedAt = now.AddDays(-2),
+                    DurationSeconds = 30,
+                    ArtifactVersionId = artifactVersions[4].Id,
+                    Environment = "Windows 11, Chrome 120",
+                    Notes = "Se muestra el mensaje de error apropiado.",
+                    CreatedAt = now.AddDays(-2),
+                    UpdatedAt = now.AddDays(-2)
+                },
+                new TestExecution
+                {
+                    Id = Guid.NewGuid(),
+                    ArtifactId = artifacts[1].Id,
+                    TestCaseId = "TC-003",
+                    TestCaseName = "Validar recuperación de contraseña",
+                    Result = "Failed",
+                    ExecutedBy = users[8].Id,
+                    ExecutedAt = now.AddDays(-1),
+                    DurationSeconds = 120,
+                    ArtifactVersionId = artifactVersions[4].Id,
+                    Environment = "Windows 11, Firefox 115",
+                    Notes = "El email de recuperación no se está enviando.",
+                    CreatedAt = now.AddDays(-1),
+                    UpdatedAt = now.AddDays(-1)
+                },
+                new TestExecution
+                {
+                    Id = Guid.NewGuid(),
+                    ArtifactId = artifacts[2].Id, // Arquitectura SGE
+                    TestCaseId = "TC-010",
+                    TestCaseName = "Validar conectividad con base de datos",
+                    Result = "Passed",
+                    ExecutedBy = users[8].Id,
+                    ExecutedAt = now.AddDays(-1),
+                    DurationSeconds = 15,
+                    ArtifactVersionId = artifactVersions[5].Id,
+                    Environment = "PostgreSQL 16",
+                    Notes = "Conexión establecida exitosamente.",
+                    CreatedAt = now.AddDays(-1),
+                    UpdatedAt = now.AddDays(-1)
+                }
+            };
+            await _context.TestExecutions.AddRangeAsync(testExecutions);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Ejecuciones de pruebas creadas");
+
+            // 18. Crear defectos
+            var defects = new[]
+            {
+                new Defect
+                {
+                    Id = Guid.NewGuid(),
+                    DefectNumber = "DEF-001",
+                    Title = "Email de recuperación no se envía",
+                    Description = "Cuando un usuario solicita recuperar su contraseña, el sistema no envía el email con el enlace de recuperación.",
+                    Severity = "High",
+                    Status = "Open",
+                    Priority = "High",
+                    Type = "Functional",
+                    ProjectId = projects[0].Id,
+                    ArtifactId = artifacts[1].Id,
+                    ArtifactVersionId = artifactVersions[4].Id,
+                    TestExecutionId = testExecutions[2].Id,
+                    ReportedBy = users[8].Id, // Patricia López
+                    ReportedAt = now.AddDays(-1).AddHours(-2),
+                    AssignedTo = users[4].Id, // Ana Martínez
+                    AssignedAt = now.AddDays(-1).AddHours(-1),
+                    StepsToReproduce = "1. Ir a la página de login\n2. Click en 'Olvidé mi contraseña'\n3. Ingresar email registrado\n4. Click en 'Enviar'\n5. Verificar bandeja de entrada",
+                    ExpectedResult = "El usuario debe recibir un email con enlace de recuperación en menos de 2 minutos.",
+                    ActualResult = "No se recibe ningún email. La respuesta del sistema indica éxito pero el email no llega.",
+                    Environment = "Windows 11, Firefox 115, PostgreSQL 16",
+                    Tags = "login,authentication,email",
+                    CreatedAt = now.AddDays(-1).AddHours(-2),
+                    UpdatedAt = now.AddDays(-1).AddHours(-1)
+                },
+                new Defect
+                {
+                    Id = Guid.NewGuid(),
+                    DefectNumber = "DEF-002",
+                    Title = "Error de validación en campo de email",
+                    Description = "El campo de email no valida correctamente el formato y permite ingresar textos sin @",
+                    Severity = "Medium",
+                    Status = "In Progress",
+                    Priority = "Medium",
+                    Type = "Functional",
+                    ProjectId = projects[0].Id,
+                    ArtifactId = artifacts[1].Id,
+                    ArtifactVersionId = artifactVersions[4].Id,
+                    ReportedBy = users[8].Id,
+                    ReportedAt = now.AddDays(-3),
+                    AssignedTo = users[5].Id, // Luis Torres
+                    AssignedAt = now.AddDays(-3).AddHours(2),
+                    StepsToReproduce = "1. Ir al formulario de registro\n2. En el campo email escribir 'usuario'\n3. Intentar enviar el formulario",
+                    ExpectedResult = "Debe mostrar error: 'Por favor ingrese un email válido'",
+                    ActualResult = "El formulario se envía sin mostrar error de validación.",
+                    Environment = "Windows 11, Chrome 120",
+                    Tags = "validation,form,email",
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now.AddHours(-2)
+                },
+                new Defect
+                {
+                    Id = Guid.NewGuid(),
+                    DefectNumber = "DEF-003",
+                    Title = "Timeout en consultas complejas",
+                    Description = "Las consultas que involucran múltiples JOINs tardan más de 30 segundos y algunas terminan en timeout.",
+                    Severity = "Critical",
+                    Status = "Resolved",
+                    Priority = "Urgent",
+                    Type = "Performance",
+                    ProjectId = projects[0].Id,
+                    ArtifactId = artifacts[2].Id,
+                    ArtifactVersionId = artifactVersions[5].Id,
+                    ReportedBy = users[3].Id, // Carlos Ramírez
+                    ReportedAt = now.AddDays(-5),
+                    AssignedTo = users[3].Id,
+                    AssignedAt = now.AddDays(-5).AddHours(1),
+                    ResolvedAt = now.AddDays(-4),
+                    ResolvedBy = users[3].Id,
+                    Resolution = "Se agregaron índices a las columnas más utilizadas en los JOINs. Se redujo el tiempo promedio de consulta a 2 segundos.",
+                    StepsToReproduce = "1. Acceder al dashboard principal\n2. Aplicar filtros de fecha del último año\n3. Seleccionar todos los proyectos\n4. Generar reporte",
+                    ExpectedResult = "El reporte debe generarse en menos de 5 segundos.",
+                    ActualResult = "El reporte tarda más de 30 segundos o termina en timeout.",
+                    Environment = "PostgreSQL 16, 1000 registros en BD",
+                    Tags = "performance,database,query",
+                    CreatedAt = now.AddDays(-5),
+                    UpdatedAt = now.AddDays(-4)
+                },
+                new Defect
+                {
+                    Id = Guid.NewGuid(),
+                    DefectNumber = "DEF-004",
+                    Title = "Botón de guardar no responde en formularios largos",
+                    Description = "En formularios con más de 20 campos, el botón de guardar no responde al primer click.",
+                    Severity = "Low",
+                    Status = "Closed",
+                    Priority = "Low",
+                    Type = "UI",
+                    ProjectId = projects[0].Id,
+                    ReportedBy = users[9].Id, // Viewer
+                    ReportedAt = now.AddDays(-10),
+                    AssignedTo = users[5].Id,
+                    AssignedAt = now.AddDays(-10).AddHours(3),
+                    ResolvedAt = now.AddDays(-8),
+                    ResolvedBy = users[5].Id,
+                    Resolution = "Se agregó feedback visual mientras se procesa el guardado. Se mejoró la experiencia de usuario.",
+                    StepsToReproduce = "1. Abrir formulario de proyecto nuevo\n2. Llenar todos los campos\n3. Click en botón Guardar\n4. Observar que no hay respuesta inmediata",
+                    ExpectedResult = "El botón debe mostrar algún indicador de que está procesando.",
+                    ActualResult = "El botón no muestra ninguna retroalimentación inmediata.",
+                    Environment = "Windows 11, Chrome 120",
+                    Tags = "ui,ux,feedback",
+                    CreatedAt = now.AddDays(-10),
+                    UpdatedAt = now.AddDays(-7)
+                },
+                new Defect
+                {
+                    Id = Guid.NewGuid(),
+                    DefectNumber = "DEF-005",
+                    Title = "Inconsistencia en formato de fechas",
+                    Description = "Las fechas se muestran en diferentes formatos en distintas secciones de la aplicación.",
+                    Severity = "Low",
+                    Status = "Reopened",
+                    Priority = "Medium",
+                    Type = "UI",
+                    ProjectId = projects[0].Id,
+                    ReportedBy = users[1].Id, // María González
+                    ReportedAt = now.AddDays(-8),
+                    AssignedTo = users[5].Id,
+                    AssignedAt = now.AddDays(-8).AddHours(1),
+                    ResolvedAt = now.AddDays(-6),
+                    ResolvedBy = users[5].Id,
+                    Resolution = "Se estandarizó el formato a DD/MM/YYYY en toda la aplicación.",
+                    StepsToReproduce = "1. Ver lista de proyectos (formato MM/DD/YYYY)\n2. Ver detalle de proyecto (formato DD-MM-YYYY)\n3. Ver iteraciones (formato YYYY/MM/DD)",
+                    ExpectedResult = "Todas las fechas deben tener el mismo formato.",
+                    ActualResult = "Cada sección muestra las fechas en formato diferente.",
+                    Environment = "Windows 11, Chrome 120",
+                    Tags = "ui,format,consistency",
+                    CreatedAt = now.AddDays(-8),
+                    UpdatedAt = now.AddHours(-3)
+                }
+            };
+            await _context.Defects.AddRangeAsync(defects);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Defectos creados");
+
+            // 19. Crear notificaciones de ejemplo
             var notifications = new[]
             {
                 new Notification
@@ -1002,9 +1345,13 @@ public class DatabaseManagementController : ControllerBase
                     artefactos = artifacts.Length,
                     versionesArtefactos = artifactVersions.Length,
                     iteraciones = 2,
+                    tareasIteracion = 4,
+                    progresoIteracion = 3,
                     userStories = 3,
                     alcanceIteracion = 2,
                     asignacionesProyecto = 11,
+                    ejecucionesPrueba = 4,
+                    defectos = 5,
                     notificaciones = notifications.Length
                 },
                 credenciales = new
@@ -1052,8 +1399,12 @@ public class DatabaseManagementController : ControllerBase
                 artefactos = await _context.Artifacts.CountAsync(),
                 versionesArtefactos = await _context.ArtifactVersions.CountAsync(),
                 iteraciones = await _context.Iterations.CountAsync(),
+                tareasIteracion = await _context.IterationTasks.CountAsync(),
+                progresoIteracion = await _context.IterationProgresses.CountAsync(),
                 userStories = await _context.UserStories.CountAsync(),
                 alcanceIteracion = await _context.IterationScopes.CountAsync(),
+                ejecucionesPrueba = await _context.TestExecutions.CountAsync(),
+                defectos = await _context.Defects.CountAsync(),
                 notificaciones = await _context.Notifications.CountAsync()
             };
 

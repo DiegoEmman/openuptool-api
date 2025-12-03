@@ -12,7 +12,7 @@ using System.Text.Json.Serialization;
 
 namespace OpenUpTool.Api;
 
-public class Program
+public partial class Program
 {
     public static void Main(string[] args)
     {
@@ -192,9 +192,6 @@ public class Program
             
             // Habilitar anotaciones
             c.EnableAnnotations();
-            
-            // Soporte para file uploads
-            c.OperationFilter<FileUploadOperationFilter>();
         });
         
         var app = builder.Build();
@@ -268,3 +265,6 @@ public class Program
         app.Run();
     }
 }
+
+// Hacer Program accesible para pruebas de integración
+public partial class Program { }

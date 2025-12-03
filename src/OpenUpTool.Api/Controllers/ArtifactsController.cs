@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenUpTool.Api.Models;
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Interfaces;
 using System.Security.Claims;
@@ -116,7 +117,7 @@ public class ArtifactsController : ControllerBase
     [HttpPost]
     [Consumes("multipart/form-data")]
     [Authorize(Roles = "Admin,Manager,Developer")]
-    public async Task<ActionResult<ArtifactDto>> Create(Guid projectId, [FromForm] CreateArtifactDto dto, [FromForm] IFormFile? file)
+    public async Task<ActionResult<ArtifactDto>> Create(Guid projectId, [FromForm] CreateArtifactRequest request)
     {
         try
         {
@@ -129,23 +130,39 @@ public class ArtifactsController : ControllerBase
             if (!hasAccess)
                 return Forbid();
 
-            // Validar que el projectId del DTO coincida con el de la ruta
-            if (dto.ProjectId != projectId)
+            // Validar que el projectId del request coincida con el de la ruta
+            if (request.ProjectId != projectId)
                 return BadRequest(new { message = "El projectId del cuerpo debe coincidir con el de la URL" });
 
             Stream? fileStream = null;
             string? fileName = null;
 
-            if (file != null && file.Length > 0)
+            if (request.File != null && request.File.Length > 0)
             {
-                if (string.IsNullOrEmpty(dto.FileCategory))
+                if (string.IsNullOrEmpty(request.FileCategory))
                 {
                     return BadRequest(new { message = "FileCategory es requerida cuando se adjunta un archivo" });
                 }
 
-                fileStream = file.OpenReadStream();
-                fileName = file.FileName;
+                fileStream = request.File.OpenReadStream();
+                fileName = request.File.FileName;
             }
+
+            // Convertir el request a DTO
+            var dto = new CreateArtifactDto(
+                request.ProjectId,
+                request.PhaseId,
+                request.ArtifactTypeId,
+                request.Title,
+                request.Description,
+                request.Author,
+                request.IsMandatory,
+                request.ContentText,
+                request.FileCategory,
+                request.RepositoryUrl,
+                request.RepositoryVersion,
+                request.BuildNumber
+            );
 
             var artifact = await _artifactService.CreateArtifactAsync(dto, fileStream, fileName);
             return CreatedAtAction(nameof(GetByProjectAndPhase), new { projectId, phaseId = dto.PhaseId }, artifact);
@@ -167,7 +184,7 @@ public class ArtifactsController : ControllerBase
     [HttpPatch("{artifactId}")]
     [Consumes("multipart/form-data")]
     [Authorize(Roles = "Admin,Manager,Developer")]
-    public async Task<ActionResult<ArtifactDto>> Update(Guid projectId, Guid artifactId, [FromForm] UpdateArtifactDto dto, [FromForm] IFormFile? file)
+    public async Task<ActionResult<ArtifactDto>> Update(Guid projectId, Guid artifactId, [FromForm] UpdateArtifactRequest request)
     {
         try
         {
@@ -183,16 +200,30 @@ public class ArtifactsController : ControllerBase
             Stream? fileStream = null;
             string? fileName = null;
 
-            if (file != null && file.Length > 0)
+            if (request.File != null && request.File.Length > 0)
             {
-                if (string.IsNullOrEmpty(dto.FileCategory))
+                if (string.IsNullOrEmpty(request.FileCategory))
                 {
                     return BadRequest(new { message = "FileCategory es requerida cuando se adjunta un archivo" });
                 }
 
-                fileStream = file.OpenReadStream();
-                fileName = file.FileName;
+                fileStream = request.File.OpenReadStream();
+                fileName = request.File.FileName;
             }
+
+            // Convertir el request a DTO
+            var dto = new UpdateArtifactDto(
+                request.Title,
+                request.Description,
+                request.Author,
+                request.Status,
+                request.IsMandatory,
+                request.ContentText,
+                request.FileCategory,
+                request.RepositoryUrl,
+                request.RepositoryVersion,
+                request.BuildNumber
+            );
 
             var artifact = await _artifactService.UpdateArtifactAsync(artifactId, dto, fileStream, fileName);
             if (artifact == null)

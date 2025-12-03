@@ -1,146 +1,129 @@
 # OpenUpTool Tests
 
-Suite de pruebas unitarias y de integración para OpenUpTool API.
+## Resumen
 
-## 🎯 Estado Actual
+Este directorio contiene las pruebas unitarias y de integración para el backend de OpenUpTool.
 
-✅ **14 pruebas en total**  
-✅ **100% de éxito**  
-✅ **0 pruebas fallidas**
+**Total de pruebas:** 9 pruebas unitarias
 
-## 🚀 Ejecución Rápida
-
-```powershell
-# Ejecutar todas las pruebas
-dotnet test
-
-# Con salida detallada
-dotnet test --verbosity detailed
-
-# Solo este proyecto
-dotnet test tests/OpenUpTool.Tests/OpenUpTool.Tests.csproj
-```
-
-## 📦 Tecnologías
-
--   **xUnit 2.9.2** - Framework de testing
--   **Moq 4.20.72** - Mocking de dependencias
--   **FluentAssertions 7.0.0** - Assertions expresivas
--   **Microsoft.AspNetCore.Mvc.Testing** - Testing de integración
--   **EntityFrameworkCore.InMemory** - Base de datos en memoria
-
-## 📁 Estructura
+## Estructura
 
 ```
 tests/OpenUpTool.Tests/
-├── Controllers/           # Pruebas de controladores (9 tests)
-│   ├── AuthControllerTests.cs
-│   └── ProjectsControllerTests.cs
-├── Services/             # Pruebas de servicios (5 tests)
-│   └── ProjectServiceTests.cs
-└── Helpers/              # Utilidades de prueba
-    ├── CustomWebApplicationFactory.cs
-    ├── TestDataSeeder.cs
-    └── JwtTokenHelper.cs
+├── Controllers/              # Pruebas unitarias de controladores
+│   ├── AuthControllerTests.cs (5 tests)
+│   └── ProjectsControllerTests.cs (4 tests)
+└── README.md
 ```
 
-## 📖 Documentación Completa
+## Stack de Testing
 
-Para documentación detallada de todas las pruebas, patrones implementados y guías de mantenimiento, consulta:
+- **xUnit 2.9.2**: Framework de testing
+- **Moq 4.20.72**: Librería de mocking
+- **FluentAssertions 7.0.0**: Assertions expresivas
+- **Microsoft.AspNetCore.Mvc.Testing**: Testing de integración con WebApplicationFactory
+- **Microsoft.EntityFrameworkCore.InMemory**: Base de datos en memoria para tests
 
-**[TESTING_DOCUMENTATION.md](../../TESTING_DOCUMENTATION.md)**
+## Cobertura de Historias de Usuario
 
-## 🧪 Cobertura
+Las pruebas actualmente cubren:
 
-### Controllers
+- **HU-001/002/003**: Autenticación y registro (AuthController)
+- **HU-004**: Gestión básica de proyectos (ProjectsController)
 
--   ✅ AuthController (4 tests)
-    -   Login con credenciales válidas/inválidas
-    -   Registro de usuarios
-    -   Consulta de usuarios
--   ✅ ProjectsController (5 tests)
-    -   CRUD completo
-    -   Control de acceso
-    -   Autorización por roles
+## Pruebas Unitarias
 
-### Services
+### AuthControllerTests (HU-001, HU-002, HU-003) - 5 tests
+- **Register_WithValidData_ReturnsOk**: Verifica registro exitoso
+- **Register_WithExistingEmail_ReturnsBadRequest**: Verifica validación de email duplicado
+- **Login_WithValidCredentials_ReturnsToken**: Verifica login exitoso
+- **Login_WithInvalidCredentials_ReturnsUnauthorized**: Verifica credenciales incorrectas
+- **GetCurrentUser_WithValidToken_ReturnsUser**: Verifica obtención de usuario actual
 
--   ✅ ProjectService (5 tests)
-    -   Consultas y filtrado
-    -   Creación con fases automáticas
-    -   Validación de acceso
-    -   Eliminación
+### ProjectsControllerTests (HU-004) - 4 tests
+- **GetAll_ReturnsOkWithProjects**: Obtiene todos los proyectos del usuario
+- **GetById_WithValidId_ReturnsOkWithProject**: Obtiene proyecto por ID
+- **GetById_WithInvalidId_ReturnsNotFound**: Maneja proyecto inexistente
+- **Create_WithValidData_ReturnsCreatedProject**: Crea nuevo proyecto
 
-## 🔧 Helpers Disponibles
+## Resultado de Ejecución
 
-### TestDataSeeder
+```bash
+dotnet test --verbosity normal
+```
 
-Datos de prueba pre-configurados:
+**Resultado:** ✅ 9/9 tests passed (100% success rate)
 
--   3 roles (Admin, Manager, Developer)
--   3 usuarios con passwords conocidos (Test123!)
--   1 proyecto de prueba con 4 fases OpenUP
+```
+Test summary: total: 9, failed: 0, succeeded: 9, skipped: 0
+```
 
-### JwtTokenHelper
+## Ejecución de Pruebas
 
-Generación de tokens JWT para pruebas:
+### Ejecutar todas las pruebas
+```bash
+cd E:\Escritorio\openuptool-api
+dotnet test
+```
+
+### Ejecutar con información detallada
+```bash
+dotnet test --verbosity normal
+```
+
+### Ejecutar solo pruebas unitarias
+```bash
+dotnet test --filter "FullyQualifiedName~Controllers"
+```
+
+## Estructura de una Prueba Unitaria
+
+Todas las pruebas siguen el patrón AAA (Arrange-Act-Assert):
 
 ```csharp
-var token = JwtTokenHelper.GenerateAdminToken();
-var token = JwtTokenHelper.GenerateManagerToken();
-var token = JwtTokenHelper.GenerateDeveloperToken();
+[Fact]
+public async Task MethodName_Scenario_ExpectedResult()
+{
+    // Arrange: Configurar mocks y datos de prueba
+    var mockService = new Mock<IService>();
+    mockService.Setup(s => s.Method()).ReturnsAsync(expectedValue);
+    var controller = new Controller(mockService.Object);
+
+    // Act: Ejecutar la acción a probar
+    var result = await controller.Action();
+
+    // Assert: Verificar el resultado
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var value = Assert.IsType<ExpectedType>(okResult.Value);
+    Assert.Equal(expectedValue, value);
+}
 ```
 
-### CustomWebApplicationFactory
+## Notas Importantes
 
-Factory para pruebas de integración con base de datos en memoria.
+1. **Mocking**: Se utiliza Moq para simular dependencias en pruebas unitarias
+2. **In-Memory Database**: Las pruebas de integración usan EF Core In-Memory
+3. **Claims**: Los tests simulan autenticación con ClaimsPrincipal
+4. **Isolation**: Cada test es independiente y no comparte estado
+5. **Nomenclatura**: `MethodName_Scenario_ExpectedResult`
+6. **Program.cs Accessibility**: El archivo Program.cs está marcado como `partial class` para permitir que WebApplicationFactory acceda a él desde los tests de integración
 
-## 📊 Resultados de Última Ejecución
+## Cómo Agregar Más Pruebas
 
-```
-Test summary: total: 14, failed: 0, succeeded: 14, skipped: 0, duration: 0.7s
-Build succeeded in 2.0s
-```
+Para agregar pruebas de otros controladores:
 
-## 🎓 Patrones Implementados
+1. Revisa la interfaz del servicio en `src/OpenUpTool.Core/Interfaces/IServices.cs`
+2. Revisa el controlador real en `src/OpenUpTool.Api/Controllers/`
+3. Crea un nuevo archivo de test siguiendo el patrón de `ProjectsControllerTests.cs`
+4. Asegúrate de mockear todas las dependencias del constructor
+5. Usa las firmas de métodos reales de las interfaces
 
--   ✅ **AAA Pattern** (Arrange-Act-Assert)
--   ✅ **Mocking** con Moq para aislar dependencias
--   ✅ **FluentAssertions** para assertions legibles
--   ✅ **Test Data Builders** con helpers
--   ✅ **Nomenclatura clara**: `MethodName_Scenario_ExpectedResult`
+## Próximos Pasos
 
-## 🔍 Troubleshooting
+- Agregar pruebas para ArtifactsController (HU-005)
+- Agregar pruebas para DefectsController (HU-009)
+- Agregar pruebas para IterationsController (HU-008)
+- Agregar pruebas para TestExecutionsController (HU-009)
+- Implementar pruebas de integración configurando correctamente el test server
+- Agregar cobertura de código con coverlet
 
-### Error: "Cannot find program"
-
-```powershell
-# Asegúrate de estar en el directorio raíz del repositorio
-cd E:\Escritorio\openuptool-api
-```
-
-### Error: "Authentication failed"
-
-Verifica que `JwtTokenHelper` esté configurado con los mismos parámetros que la aplicación.
-
-## 📝 Agregar Nuevas Pruebas
-
-1. Crear archivo en el directorio correspondiente
-2. Heredar de la clase base si aplica
-3. Usar el patrón AAA
-4. Mockear dependencias necesarias
-5. Ejecutar y verificar: `dotnet test`
-
-## 🤝 Contribuir
-
-Al agregar nuevas funcionalidades al API:
-
-1. ✅ Crea pruebas ANTES de implementar (TDD)
-2. ✅ Asegúrate que todas las pruebas pasen
-3. ✅ Documenta pruebas complejas en TESTING_DOCUMENTATION.md
-4. ✅ Mantén cobertura alta
-
----
-
-**Última actualización**: 26 de Noviembre de 2025  
-**Mantenido por**: Equipo OpenUpTool
