@@ -20,32 +20,37 @@ tests/OpenUpTool.Tests/
 ## 🧪 Cobertura de Pruebas
 
 ### AuthControllerTests (5 tests) - HU-001, HU-002, HU-003
-- ✅ Register_WithValidData_ReturnsOk
-- ✅ Register_WithExistingEmail_ReturnsBadRequest
-- ✅ Login_WithValidCredentials_ReturnsToken
-- ✅ Login_WithInvalidCredentials_ReturnsUnauthorized
-- ✅ GetCurrentUser_WithValidToken_ReturnsUser
+
+-   ✅ Register_WithValidData_ReturnsOk
+-   ✅ Register_WithExistingEmail_ReturnsBadRequest
+-   ✅ Login_WithValidCredentials_ReturnsToken
+-   ✅ Login_WithInvalidCredentials_ReturnsUnauthorized
+-   ✅ GetCurrentUser_WithValidToken_ReturnsUser
 
 ### ProjectsControllerTests (4 tests) - HU-004
-- ✅ GetAll_ReturnsOkWithProjects
-- ✅ GetById_WithValidId_ReturnsOkWithProject
-- ✅ GetById_WithInvalidId_ReturnsNotFound
-- ✅ Create_WithValidData_ReturnsCreatedProject
+
+-   ✅ GetAll_ReturnsOkWithProjects
+-   ✅ GetById_WithValidId_ReturnsOkWithProject
+-   ✅ GetById_WithInvalidId_ReturnsNotFound
+-   ✅ Create_WithValidData_ReturnsCreatedProject
 
 ## 🚀 Cómo Correr las Pruebas
 
 ### Opción 1: Desde el directorio raíz
+
 ```powershell
 cd E:\Escritorio\openuptool-api
 dotnet test
 ```
 
 ### Opción 2: Con output detallado
+
 ```powershell
 dotnet test --verbosity normal
 ```
 
 ### Opción 3: Solo un controlador específico
+
 ```powershell
 dotnet test --filter "FullyQualifiedName~AuthControllerTests"
 ```
@@ -91,13 +96,13 @@ public async Task MethodName_Scenario_ExpectedResult()
 
 ## 🛠️ Stack Tecnológico
 
-| Librería | Versión | Propósito |
-|----------|---------|-----------|
-| xUnit | 2.9.2 | Framework de testing |
-| Moq | 4.20.72 | Mocking de dependencias |
-| FluentAssertions | 7.0.0 | Assertions expresivas |
-| Microsoft.AspNetCore.Mvc.Testing | 9.0.1 | Testing de integración |
-| Microsoft.EntityFrameworkCore.InMemory | 9.0.1 | BD en memoria para tests |
+| Librería                               | Versión | Propósito                |
+| -------------------------------------- | ------- | ------------------------ |
+| xUnit                                  | 2.9.2   | Framework de testing     |
+| Moq                                    | 4.20.72 | Mocking de dependencias  |
+| FluentAssertions                       | 7.0.0   | Assertions expresivas    |
+| Microsoft.AspNetCore.Mvc.Testing       | 9.0.1   | Testing de integración   |
+| Microsoft.EntityFrameworkCore.InMemory | 9.0.1   | BD en memoria para tests |
 
 ## 🎯 Puntos Importantes
 
@@ -111,25 +116,30 @@ public async Task MethodName_Scenario_ExpectedResult()
 ## 📝 Cómo Agregar Más Tests
 
 ### Paso 1: Revisa las interfaces reales
+
 ```powershell
 # Ver las firmas de métodos reales
 cat src/OpenUpTool.Core/Interfaces/IServices.cs
 ```
 
 ### Paso 2: Revisa el controlador
+
 ```powershell
 # Ver el controlador que quieres probar
 cat src/OpenUpTool.Api/Controllers/NombreController.cs
 ```
 
 ### Paso 3: Crea el archivo de test
+
 Usa `ProjectsControllerTests.cs` como plantilla:
-- Mockea todas las dependencias del constructor
-- Setup de ClaimsPrincipal para autenticación
-- Usa las firmas reales de las interfaces (no inventes métodos)
-- Usa los DTOs reales (records con constructores posicionales)
+
+-   Mockea todas las dependencias del constructor
+-   Setup de ClaimsPrincipal para autenticación
+-   Usa las firmas reales de las interfaces (no inventes métodos)
+-   Usa los DTOs reales (records con constructores posicionales)
 
 ### Paso 4: Ejecuta y verifica
+
 ```powershell
 dotnet test
 ```
@@ -137,22 +147,29 @@ dotnet test
 ## ⚠️ Errores Comunes
 
 ### Error: Constructor no existe
+
 ```
 'Controller' does not contain a constructor that takes X arguments
 ```
+
 **Solución:** Verifica las dependencias reales del controlador
 
 ### Error: Método no existe en interfaz
+
 ```
 'IService' does not contain a definition for 'MethodAsync'
 ```
+
 **Solución:** Usa el nombre de método exacto de `IServices.cs`
 
 ### Error: DTO con constructor posicional
+
 ```
 'CreateDto' does not contain a definition for 'Property'
 ```
+
 **Solución:** Los DTOs son records, usa constructores posicionales:
+
 ```csharp
 var dto = new CreateProjectDto(
     "Name",
@@ -166,15 +183,15 @@ var dto = new CreateProjectDto(
 
 ## 📚 Recursos
 
-- [Documentación xUnit](https://xunit.net/)
-- [Documentación Moq](https://github.com/moq/moq4)
-- [ASP.NET Core Testing](https://learn.microsoft.com/en-us/aspnet/core/test/)
+-   [Documentación xUnit](https://xunit.net/)
+-   [Documentación Moq](https://github.com/moq/moq4)
+-   [ASP.NET Core Testing](https://learn.microsoft.com/en-us/aspnet/core/test/)
 
 ## 🔮 Próximos Pasos
 
-- [ ] Agregar tests para ArtifactsController (HU-005)
-- [ ] Agregar tests para DefectsController (HU-009)
-- [ ] Agregar tests para IterationsController (HU-008)
-- [ ] Agregar tests para TestExecutionsController
-- [ ] Configurar tests de integración con múltiples proveedores de BD
-- [ ] Implementar cobertura de código con Coverlet
+-   [ ] Agregar tests para ArtifactsController (HU-005)
+-   [ ] Agregar tests para DefectsController (HU-009)
+-   [ ] Agregar tests para IterationsController (HU-008)
+-   [ ] Agregar tests para TestExecutionsController
+-   [ ] Configurar tests de integración con múltiples proveedores de BD
+-   [ ] Implementar cobertura de código con Coverlet
