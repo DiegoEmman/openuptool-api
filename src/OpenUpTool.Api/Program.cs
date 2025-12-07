@@ -17,7 +17,36 @@ public partial class Program
     public static void Main(string[] args)
     {
         // Cargar variables de entorno desde .env
-        Env.Load();
+        // Buscar el archivo .env en múltiples ubicaciones posibles
+        var possiblePaths = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), ".env"), // Desde raíz del proyecto
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env"), // Desde src/OpenUpTool.Api
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", ".env"), // Desde bin/Debug/net9.0
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".env"), // Alternativa desde bin
+        };
+
+        string? foundEnvPath = null;
+        foreach (var path in possiblePaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (File.Exists(fullPath))
+            {
+                foundEnvPath = fullPath;
+                break;
+            }
+        }
+        
+        if (foundEnvPath != null)
+        {
+            Env.Load(foundEnvPath);
+            Console.WriteLine($"✓ Archivo .env cargado desde: {foundEnvPath}");
+        }
+        else
+        {
+            Console.WriteLine($"⚠ Archivo .env no encontrado. Usando valores por defecto.");
+            Console.WriteLine($"   Directorio actual: {Directory.GetCurrentDirectory()}");
+        }
         
         // Asegurar que el entorno esté en Development si ASPNETCORE_ENVIRONMENT está configurado
         var aspnetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");

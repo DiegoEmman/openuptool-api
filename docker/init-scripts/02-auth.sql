@@ -1,7 +1,3 @@
-warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
-      Failed to determine the https port for redirect.
-OPTIONS /api/auth/login                          204 (1ms)
-POST   /api/auth/login                          401 (1255ms)
 -- Crear tablas de autenticación
 CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
