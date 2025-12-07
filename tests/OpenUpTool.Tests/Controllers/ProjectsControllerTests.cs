@@ -14,6 +14,7 @@ public class ProjectsControllerTests
 {
     private readonly Mock<IProjectService> _projectServiceMock;
     private readonly Mock<IIterationProgressService> _progressServiceMock;
+    private readonly Mock<IAuditLogService> _auditLogServiceMock;
     private readonly Mock<ILogger<ProjectsController>> _loggerMock;
     private readonly ProjectsController _controller;
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -22,11 +23,13 @@ public class ProjectsControllerTests
     {
         _projectServiceMock = new Mock<IProjectService>();
         _progressServiceMock = new Mock<IIterationProgressService>();
+        _auditLogServiceMock = new Mock<IAuditLogService>();
         _loggerMock = new Mock<ILogger<ProjectsController>>();
 
         _controller = new ProjectsController(
             _projectServiceMock.Object,
             _progressServiceMock.Object,
+            _auditLogServiceMock.Object,
             _loggerMock.Object
         );
 

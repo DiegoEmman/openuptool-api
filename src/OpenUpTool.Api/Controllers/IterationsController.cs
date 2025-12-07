@@ -107,4 +107,124 @@ public class IterationsController : ControllerBase
             return StatusCode(500, new { message = "Error al actualizar iteración" });
         }
     }
+
+    // ========== HU-016: CAPACIDAD Y VELOCIDAD ==========
+
+    /// <summary>
+    /// Actualiza la capacidad del equipo para una iteración
+    /// </summary>
+    [HttpPatch("{iterationId}/capacity")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<IterationDto>> UpdateCapacity(Guid projectId, Guid iterationId, [FromBody] UpdateIterationCapacityDto dto)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var iteration = await _iterationService.UpdateIterationCapacityAsync(iterationId, dto);
+            if (iteration == null)
+                return NotFound(new { message = "Iteración no encontrada" });
+
+            return Ok(iteration);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar capacidad de iteración {IterationId}", iterationId);
+            return StatusCode(500, new { message = "Error al actualizar capacidad" });
+        }
+    }
+
+    /// <summary>
+    /// Registra la velocidad (puntos completados) de una iteración
+    /// </summary>
+    [HttpPatch("{iterationId}/velocity")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<IterationDto>> UpdateVelocity(Guid projectId, Guid iterationId, [FromBody] UpdateIterationVelocityDto dto)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var iteration = await _iterationService.UpdateIterationVelocityAsync(iterationId, dto);
+            if (iteration == null)
+                return NotFound(new { message = "Iteración no encontrada" });
+
+            return Ok(iteration);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al registrar velocidad de iteración {IterationId}", iterationId);
+            return StatusCode(500, new { message = "Error al registrar velocidad" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene estadísticas de velocidad histórica del proyecto
+    /// </summary>
+    [HttpGet("velocity-stats")]
+    public async Task<ActionResult<ProjectVelocityStatsDto>> GetVelocityStats(Guid projectId)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var stats = await _iterationService.GetProjectVelocityStatsAsync(projectId);
+            if (stats == null)
+                return NotFound(new { message = "No hay iteraciones para este proyecto" });
+
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener estadísticas de velocidad del proyecto {ProjectId}", projectId);
+            return StatusCode(500, new { message = "Error al obtener estadísticas" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene datos para planificación del siguiente Sprint/iteración
+    /// </summary>
+    [HttpGet("planning-data")]
+    public async Task<ActionResult<PlanningDataDto>> GetPlanningData(Guid projectId)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var data = await _iterationService.GetPlanningDataAsync(projectId);
+            if (data == null)
+                return NotFound(new { message = "No hay iteraciones para este proyecto" });
+
+            return Ok(data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener datos de planificación del proyecto {ProjectId}", projectId);
+            return StatusCode(500, new { message = "Error al obtener datos de planificación" });
+        }
+    }
 }

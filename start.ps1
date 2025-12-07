@@ -43,7 +43,6 @@ Write-Host ""
 
 # Levantar Base de Datos
 Write-Host "[4/5] Levantando PostgreSQL con Docker..." -ForegroundColor Yellow
-Set-Location "e:\Escritorio\openuptool-api"
 
 if (Test-Path .env) {
     Write-Host "✅ Archivo .env encontrado" -ForegroundColor Green

@@ -11,6 +11,9 @@ public class Project
     public string? Description { get; set; }
     public List<string> Tags { get; set; } = new();
     public Guid? PlanId { get; set; }
+    public bool IsArchived { get; set; } = false;
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

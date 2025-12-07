@@ -10,6 +10,13 @@ public class Iteration
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string Status { get; set; } = "Planeada"; // Planeada, En curso, Finalizada
+    
+    // HU-016: Capacidad y velocidad
+    public int? PlannedCapacityHours { get; set; } // Capacidad planificada en horas
+    public int? TeamSize { get; set; } // Número de miembros del equipo
+    public int? PlannedPoints { get; set; } // Puntos planificados para la iteración
+    public int? CompletedPoints { get; set; } // Puntos completados (velocidad real)
+    
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

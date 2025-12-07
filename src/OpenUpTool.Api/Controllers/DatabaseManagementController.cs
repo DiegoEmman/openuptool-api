@@ -32,9 +32,11 @@ public class DatabaseManagementController : ControllerBase
         try
         {
             _logger.LogWarning("🗑️ Eliminando base de datos...");
+            _context.Database.SetCommandTimeout(300); // Aumentar el timeout a 5 minutos
             await _context.Database.EnsureDeletedAsync();
             
             _logger.LogInformation("🔨 Creando base de datos...");
+            _context.Database.SetCommandTimeout(300); // Aumentar el timeout a 5 minutos
             await _context.Database.EnsureCreatedAsync();
             
             _logger.LogInformation("✅ Base de datos recreada exitosamente");
@@ -577,6 +579,59 @@ public class DatabaseManagementController : ControllerBase
                 await _context.Iterations.AddRangeAsync(iterations);
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("✅ Iteraciones creadas");
+
+                // 7.5. Crear algunos artefactos de ejemplo
+                var visionType = artifactTypes.FirstOrDefault(at => at.Code == "VIS");
+                var planType = artifactTypes.FirstOrDefault(at => at.Code == "PLAN");
+                var ucmType = artifactTypes.FirstOrDefault(at => at.Code == "UCM");
+                var inceptionPhaseForArtifacts = phases.FirstOrDefault(p => p.ProjectId == projects[0].Id && p.PhaseCode == "INCEPTION");
+                var elaborationPhaseForArtifacts = phases.FirstOrDefault(p => p.ProjectId == projects[0].Id && p.PhaseCode == "ELABORATION");
+                
+                var projectArtifacts = new[]
+                {
+                    new Artifact
+                    {
+                        Id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+                        ProjectId = projects[0].Id,
+                        PhaseId = inceptionPhaseForArtifacts?.PhaseCode ?? "INCEPTION",
+                        ArtifactTypeId = visionType?.Id ?? Guid.NewGuid(),
+                        Title = "Documento de Visión - SGE",
+                        Description = "Documento que describe la visión general del Sistema de Gestión Empresarial",
+                        Status = "Aprobado",
+                        Author = "Admin Sistema",
+                        IsMandatory = true,
+                        CreatedAt = now.AddDays(-10)
+                    },
+                    new Artifact
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = projects[0].Id,
+                        PhaseId = inceptionPhaseForArtifacts?.PhaseCode ?? "INCEPTION",
+                        ArtifactTypeId = planType?.Id ?? Guid.NewGuid(),
+                        Title = "Plan de Proyecto - SGE",
+                        Description = "Plan detallado con cronograma y asignación de recursos",
+                        Status = "En revisión",
+                        Author = "Admin Sistema",
+                        IsMandatory = true,
+                        CreatedAt = now.AddDays(-8)
+                    },
+                    new Artifact
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = projects[0].Id,
+                        PhaseId = elaborationPhaseForArtifacts?.PhaseCode ?? "ELABORATION",
+                        ArtifactTypeId = ucmType?.Id ?? Guid.NewGuid(),
+                        Title = "Modelo de Casos de Uso",
+                        Description = "Casos de uso principales del sistema",
+                        Status = "Pendiente",
+                        Author = "Carlos Ramírez",
+                        IsMandatory = true,
+                        CreatedAt = now.AddDays(-5)
+                    }
+                };
+                await _context.Artifacts.AddRangeAsync(projectArtifacts);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("✅ Artefactos de ejemplo creados (3 artefactos)");
 
                 // 8. Crear User Stories
                 var userStories = new[]
@@ -1328,6 +1383,265 @@ public class DatabaseManagementController : ControllerBase
             await _context.SaveChangesAsync();
             _logger.LogInformation("✅ Notificaciones creadas");
 
+            // 20. Crear Workflows de ejemplo
+            var workflows = new[]
+            {
+                new Workflow
+                {
+                    Id = Guid.Parse("ffffffff-1111-2222-3333-444444444444"),
+                    ProjectId = projects[0].Id, // SGE
+                    Name = "Flujo de Revisión de Documentos",
+                    Description = "Flujo estándar para revisión y aprobación de documentos",
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new Workflow
+                {
+                    Id = Guid.Parse("ffffffff-5555-6666-7777-888888888888"),
+                    ProjectId = projects[0].Id, // SGE
+                    Name = "Flujo de Desarrollo de Código",
+                    Description = "Flujo para gestión de código fuente desde desarrollo hasta producción",
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.Workflows.AddRangeAsync(workflows);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Workflows creados");
+
+            // 21. Crear Estados para los Workflows
+            var workflowStates = new[]
+            {
+                // Estados para Flujo de Revisión de Documentos
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-1111-1111-1111-111111111111"),
+                    WorkflowId = workflows[0].Id,
+                    Name = "Borrador",
+                    Description = "Documento en elaboración inicial",
+                    Order = 1,
+                    Color = "#9CA3AF",
+                    IsInitialState = true,
+                    IsFinalState = false,
+                    RequiredActions = "[\"Completar contenido\",\"Revisar formato\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-2222-2222-2222-222222222222"),
+                    WorkflowId = workflows[0].Id,
+                    Name = "En Revisión",
+                    Description = "Documento bajo revisión por pares",
+                    Order = 2,
+                    Color = "#F59E0B",
+                    IsInitialState = false,
+                    IsFinalState = false,
+                    RequiredActions = "[\"Revisar contenido\",\"Validar formato\",\"Agregar comentarios\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-3333-3333-3333-333333333333"),
+                    WorkflowId = workflows[0].Id,
+                    Name = "Aprobado",
+                    Description = "Documento aprobado para uso",
+                    Order = 3,
+                    Color = "#10B981",
+                    IsInitialState = false,
+                    IsFinalState = true,
+                    RequiredActions = "[\"Publicar documento\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                // Estados para Flujo de Desarrollo de Código
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-4444-4444-4444-444444444444"),
+                    WorkflowId = workflows[1].Id,
+                    Name = "Desarrollo",
+                    Description = "Código en desarrollo activo",
+                    Order = 1,
+                    Color = "#6366F1",
+                    IsInitialState = true,
+                    IsFinalState = false,
+                    RequiredActions = "[\"Implementar funcionalidad\",\"Escribir tests\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-5555-5555-5555-555555555555"),
+                    WorkflowId = workflows[1].Id,
+                    Name = "Testing",
+                    Description = "Código en fase de pruebas",
+                    Order = 2,
+                    Color = "#8B5CF6",
+                    IsInitialState = false,
+                    IsFinalState = false,
+                    RequiredActions = "[\"Ejecutar tests unitarios\",\"Ejecutar tests de integración\",\"Validar cobertura\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowState
+                {
+                    Id = Guid.Parse("eeeeeeee-6666-6666-6666-666666666666"),
+                    WorkflowId = workflows[1].Id,
+                    Name = "Producción",
+                    Description = "Código desplegado en producción",
+                    Order = 3,
+                    Color = "#059669",
+                    IsInitialState = false,
+                    IsFinalState = true,
+                    RequiredActions = "[\"Monitorear métricas\"]",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.WorkflowStates.AddRangeAsync(workflowStates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Estados de workflows creados");
+
+            // 22. Asignar responsables a estados
+            var stateResponsibles = new[]
+            {
+                // Revisores para estado "En Revisión"
+                new WorkflowStateResponsible
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowStateId = workflowStates[1].Id, // En Revisión
+                    UserId = users[1].Id, // Manager
+                    Role = "Revisor Principal",
+                    AssignedAt = now
+                },
+                new WorkflowStateResponsible
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowStateId = workflowStates[1].Id, // En Revisión
+                    UserId = users[4].Id, // Developer
+                    Role = "Revisor Técnico",
+                    AssignedAt = now
+                },
+                // Aprobador para estado "Aprobado"
+                new WorkflowStateResponsible
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowStateId = workflowStates[2].Id, // Aprobado
+                    UserId = users[1].Id, // Manager
+                    Role = "Aprobador",
+                    AssignedAt = now
+                },
+                // Responsables para Testing
+                new WorkflowStateResponsible
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowStateId = workflowStates[4].Id, // Testing
+                    UserId = users[6].Id, // Tester
+                    Role = "QA Lead",
+                    AssignedAt = now
+                }
+            };
+            await _context.WorkflowStateResponsibles.AddRangeAsync(stateResponsibles);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Responsables de estados asignados");
+
+            // 23. Crear permisos de workflows (HU-013)
+            var workflowPermissions = new[]
+            {
+                // Permisos para "Flujo de Desarrollo de Código" (workflows[1])
+                // Rol: autor
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "autor", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "autor", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "autor", Action = "aprobar", IsAllowed = false, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "autor", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Rol: revisor
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "revisor", Action = "crear", IsAllowed = false, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "revisor", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "revisor", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "revisor", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Rol: PO (Product Owner)
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "PO", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "PO", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "PO", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "PO", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Rol: admin
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "admin", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "admin", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "admin", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[1].Id, Role = "admin", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Permisos para "Flujo de Revisión de Documentos" (workflows[0])
+                // Rol: autor
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "autor", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "autor", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "autor", Action = "aprobar", IsAllowed = false, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "autor", Action = "cambiar_estado", IsAllowed = false, CreatedAt = now },
+                
+                // Rol: revisor
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "revisor", Action = "crear", IsAllowed = false, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "revisor", Action = "editar", IsAllowed = false, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "revisor", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "revisor", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Rol: PO
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "PO", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "PO", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "PO", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "PO", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now },
+                
+                // Rol: admin
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "admin", Action = "crear", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "admin", Action = "editar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "admin", Action = "aprobar", IsAllowed = true, CreatedAt = now },
+                new WorkflowPermission { Id = Guid.NewGuid(), WorkflowId = workflows[0].Id, Role = "admin", Action = "cambiar_estado", IsAllowed = true, CreatedAt = now }
+            };
+            await _context.WorkflowPermissions.AddRangeAsync(workflowPermissions);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Permisos de workflows creados");
+
+            // 24. Asignar workflow al artefacto de prueba y crear historial
+            var artifactVision = await _context.Artifacts.FindAsync(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+            if (artifactVision != null)
+            {
+                artifactVision.WorkflowId = workflows[0].Id;
+                artifactVision.CurrentStateId = workflowStates[1].Id; // En Revisión
+                
+                var stateHistory = new[]
+                {
+                    new ArtifactStateHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactId = artifactVision.Id,
+                        FromStateId = null,
+                        ToStateId = workflowStates[0].Id, // Borrador
+                        ChangedByUserId = users[0].Id, // Admin
+                        ChangedAt = now.AddDays(-7),
+                        Comments = "Creación inicial del documento Visión",
+                        Metadata = null
+                    },
+                    new ArtifactStateHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        ArtifactId = artifactVision.Id,
+                        FromStateId = workflowStates[0].Id, // Borrador
+                        ToStateId = workflowStates[1].Id, // En Revisión
+                        ChangedByUserId = users[2].Id, // Developer
+                        ChangedAt = now.AddDays(-2),
+                        Comments = "Documento completado, listo para revisión",
+                        Metadata = "{\"version\":\"1.0\",\"reviewers\":[\"" + users[1].Id + "\",\"" + users[4].Id + "\"]}"
+                    }
+                };
+                await _context.ArtifactStateHistories.AddRangeAsync(stateHistory);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("✅ Workflow asignado a artefacto con historial");
+            }
+
             _logger.LogInformation("🎉 Siembra de datos completada exitosamente");
 
             return Ok(new
@@ -1352,7 +1666,12 @@ public class DatabaseManagementController : ControllerBase
                     asignacionesProyecto = 11,
                     ejecucionesPrueba = 4,
                     defectos = 5,
-                    notificaciones = notifications.Length
+                    notificaciones = notifications.Length,
+                    workflows = workflows.Length,
+                    estadosWorkflow = workflowStates.Length,
+                    responsablesEstados = stateResponsibles.Length,
+                    historialEstadosArtefacto = 2,
+                    permisosWorkflow = workflowPermissions.Length
                 },
                 credenciales = new
                 {

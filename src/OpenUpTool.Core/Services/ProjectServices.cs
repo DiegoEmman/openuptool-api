@@ -116,6 +116,65 @@ public class ProjectService : IProjectService
         await _projectRepository.DeleteAsync(id);
     }
 
+    public async Task<ProjectDto?> ArchiveProjectAsync(Guid id, Guid archivedBy)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null) return null;
+
+        project.IsArchived = true;
+        project.ArchivedAt = DateTime.UtcNow;
+        project.ArchivedBy = archivedBy;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        var updated = await _projectRepository.UpdateAsync(project);
+        return MapToDto(updated);
+    }
+
+    public async Task<ProjectDto?> UnarchiveProjectAsync(Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null) return null;
+
+        project.IsArchived = false;
+        project.ArchivedAt = null;
+        project.ArchivedBy = null;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        var updated = await _projectRepository.UpdateAsync(project);
+        return MapToDto(updated);
+    }
+
+    public async Task<IEnumerable<ProjectDto>> GetArchivedProjectsForUserAsync(Guid userId)
+    {
+        var projects = await _projectRepository.GetArchivedProjectsForUserAsync(userId);
+        return projects.Select(MapToDto);
+    }
+
+    public async Task<bool> DeleteProjectPermanentlyAsync(Guid id, Guid deletedBy)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null) return false;
+
+        await _projectRepository.DeleteAsync(id);
+        return true;
+    }
+
+    public async Task<IEnumerable<UserDto>> GetProjectUsersAsync(Guid projectId)
+    {
+        var userRoles = await _projectUserRoleRepository.GetByProjectIdAsync(projectId);
+        var activeUserRoles = userRoles.Where(ur => ur.Status == "active" && ur.User != null).ToList();
+        
+        return activeUserRoles.Select(ur => new UserDto(
+            ur.UserId,
+            ur.User!.Email,
+            ur.User.FirstName,
+            ur.User.LastName,
+            ur.Role?.Name ?? "",
+            ur.User.IsActive,
+            ur.User.CreatedAt
+        )).GroupBy(u => u.Id).Select(g => g.First()).ToList();
+    }
+
     private static ProjectDto MapToDto(Project project)
     {
         return new ProjectDto(

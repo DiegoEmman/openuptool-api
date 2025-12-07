@@ -11,6 +11,11 @@ public interface IProjectService
     Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto, Guid createdBy);
     Task<ProjectDto?> UpdateProjectAsync(Guid id, UpdateProjectDto dto);
     Task DeleteProjectAsync(Guid id);
+    Task<ProjectDto?> ArchiveProjectAsync(Guid id, Guid archivedBy);
+    Task<ProjectDto?> UnarchiveProjectAsync(Guid id);
+    Task<IEnumerable<ProjectDto>> GetArchivedProjectsForUserAsync(Guid userId);
+    Task<bool> DeleteProjectPermanentlyAsync(Guid id, Guid deletedBy);
+    Task<IEnumerable<UserDto>> GetProjectUsersAsync(Guid projectId);
 }
 
 public interface IPhaseService
@@ -36,6 +41,11 @@ public interface IIterationService
     Task<IEnumerable<IterationDto>> GetIterationsByProjectAsync(Guid projectId);
     Task<IterationDto> CreateIterationAsync(Guid projectId, CreateIterationDto dto);
     Task<IterationDto?> UpdateIterationStatusAsync(Guid id, string status);
+    // HU-016: Capacidad y velocidad
+    Task<IterationDto?> UpdateIterationCapacityAsync(Guid id, UpdateIterationCapacityDto dto);
+    Task<IterationDto?> UpdateIterationVelocityAsync(Guid id, UpdateIterationVelocityDto dto);
+    Task<ProjectVelocityStatsDto?> GetProjectVelocityStatsAsync(Guid projectId);
+    Task<PlanningDataDto?> GetPlanningDataAsync(Guid projectId);
 }
 
 public interface IIterationTaskService
@@ -126,4 +136,86 @@ public interface IFileStorageService
     Task<string> GetFilePhysicalPathAsync(string filePath);
     bool IsValidFileFormat(string fileName, string category);
     long GetMaxFileSizeForCategory(string category);
+}
+
+public interface IAuditLogService
+{
+    Task LogActionAsync(Guid userId, string action, string entityType, Guid? entityId, string? details = null);
+    Task<IEnumerable<AuditLogDto>> GetAuditLogsAsync(Guid? userId = null, string? entityType = null, Guid? entityId = null);
+}
+
+public interface IMicroincrementService
+{
+    Task<IEnumerable<MicroincrementDto>> GetAllAsync();
+    Task<IEnumerable<MicroincrementDto>> GetByIterationIdAsync(Guid iterationId);
+    Task<IEnumerable<MicroincrementDto>> GetByArtifactIdAsync(Guid artifactId);
+    Task<IEnumerable<MicroincrementDto>> GetByAuthorAsync(string author);
+    Task<IEnumerable<MicroincrementDto>> GetByTypeAsync(string type);
+    Task<IEnumerable<MicroincrementDto>> GetFilteredAsync(Guid? iterationId, Guid? artifactId, string? author, string? type);
+    Task<MicroincrementDto?> GetByIdAsync(Guid id);
+    Task<MicroincrementDto> CreateAsync(CreateMicroincrementDto dto);
+    Task<MicroincrementDto?> UpdateAsync(Guid id, UpdateMicroincrementDto dto);
+    Task<bool> DeleteAsync(Guid id);
+}
+
+public interface IProjectClosureService
+{
+    Task<IEnumerable<ProjectClosureDto>> GetAllClosuresAsync();
+    Task<ProjectClosureDto?> GetClosureByIdAsync(Guid id);
+    Task<ProjectClosureDto?> GetClosureByProjectIdAsync(Guid projectId);
+    Task<ProjectClosureDto> CreateClosureAsync(CreateProjectClosureDto dto, string closedBy);
+    Task<ProjectClosureDto?> UpdateClosureAsync(Guid id, UpdateProjectClosureDto dto);
+    Task<ProjectClosureDto?> ApproveClosureAsync(Guid id, string approvedBy, ApproveClosureDto dto);
+    Task<ClosureValidationDto> ValidateClosureAsync(Guid projectId);
+    Task<bool> DeleteClosureAsync(Guid id);
+}
+
+public interface IFinalBuildService
+{
+    Task<IEnumerable<FinalBuildDto>> GetAllBuildsAsync();
+    Task<IEnumerable<FinalBuildDto>> GetBuildsByProjectIdAsync(Guid projectId);
+    Task<FinalBuildDto?> GetBuildByIdAsync(Guid id);
+    Task<FinalBuildDto?> GetBuildByNumberAsync(Guid projectId, string buildNumber);
+    Task<FinalBuildDto> CreateBuildAsync(CreateFinalBuildDto dto, string builtBy);
+    Task<FinalBuildDto?> UpdateBuildAsync(Guid id, UpdateFinalBuildDto dto);
+    Task<bool> DeleteBuildAsync(Guid id);
+}
+
+public interface IWorkflowService
+{
+    Task<IEnumerable<WorkflowDto>> GetAllWorkflowsAsync();
+    Task<IEnumerable<WorkflowDto>> GetWorkflowsByProjectIdAsync(Guid projectId);
+    Task<WorkflowWithStatesDto?> GetWorkflowByIdAsync(Guid id);
+    Task<WorkflowDto> CreateWorkflowAsync(CreateWorkflowDto dto, Guid createdBy);
+    Task<WorkflowDto?> UpdateWorkflowAsync(Guid id, UpdateWorkflowDto dto);
+    Task<bool> DeleteWorkflowAsync(Guid id);
+}
+
+public interface IWorkflowStateService
+{
+    Task<IEnumerable<WorkflowStateDto>> GetStatesByWorkflowIdAsync(Guid workflowId);
+    Task<WorkflowStateDto?> GetStateByIdAsync(Guid id);
+    Task<WorkflowStateDto> CreateStateAsync(CreateWorkflowStateDto dto);
+    Task<WorkflowStateDto?> UpdateStateAsync(Guid id, UpdateWorkflowStateDto dto);
+    Task<bool> DeleteStateAsync(Guid id);
+    Task<WorkflowStateResponsibleDto> AddResponsibleAsync(CreateWorkflowStateResponsibleDto dto);
+    Task<bool> RemoveResponsibleAsync(Guid responsibleId);
+}
+
+public interface IArtifactStateService
+{
+    Task<IEnumerable<ArtifactStateHistoryDto>> GetArtifactHistoryAsync(Guid artifactId);
+    Task<ArtifactWithWorkflowDto?> GetArtifactWithWorkflowAsync(Guid artifactId);
+    Task<ArtifactStateHistoryDto> ChangeArtifactStateAsync(ChangeArtifactStateDto dto, Guid changedBy);
+    Task<ArtifactDto?> AssignWorkflowToArtifactAsync(Guid artifactId, Guid workflowId);
+}
+
+public interface IWorkflowPermissionService
+{
+    Task<IEnumerable<WorkflowPermissionDto>> GetPermissionsByWorkflowIdAsync(Guid workflowId);
+    Task<WorkflowPermissionMatrixDto> GetPermissionMatrixAsync(Guid workflowId);
+    Task<WorkflowPermissionDto> CreatePermissionAsync(CreateWorkflowPermissionDto dto);
+    Task<WorkflowPermissionDto?> UpdatePermissionAsync(Guid id, UpdateWorkflowPermissionDto dto);
+    Task<bool> DeletePermissionAsync(Guid id);
+    Task<bool> CheckPermissionAsync(Guid workflowId, string role, string action);
 }

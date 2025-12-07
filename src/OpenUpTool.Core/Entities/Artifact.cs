@@ -30,10 +30,17 @@ public class Artifact
     public string? TestData { get; set; } // JSON: { testCases: [], results: [] }
     public string? IterationData { get; set; } // JSON: { activities: [], comments: [] }
     
+    // Campos para Workflow
+    public Guid? WorkflowId { get; set; } // Flujo de trabajo asociado
+    public Guid? CurrentStateId { get; set; } // Estado actual en el flujo
+    
     public DateTime UpdatedAt { get; set; }
 
     // Navigation properties
     public Project Project { get; set; } = null!;
     public ArtifactType ArtifactType { get; set; } = null!;
+    public Workflow? Workflow { get; set; }
+    public WorkflowState? CurrentState { get; set; }
     public ICollection<ArtifactVersion> Versions { get; set; } = new List<ArtifactVersion>();
+    public ICollection<ArtifactStateHistory> StateHistories { get; set; } = new List<ArtifactStateHistory>();
 }

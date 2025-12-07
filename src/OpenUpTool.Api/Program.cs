@@ -110,6 +110,14 @@ public partial class Program
         builder.Services.AddScoped<IProjectInvitationRepository, ProjectInvitationRepository>();
         builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
         builder.Services.AddScoped<IProjectUserRoleRepository, ProjectUserRoleRepository>();
+        builder.Services.AddScoped<IMicroincrementRepository, MicroincrementRepository>();
+        builder.Services.AddScoped<IProjectClosureRepository, ProjectClosureRepository>();
+        builder.Services.AddScoped<IFinalBuildRepository, FinalBuildRepository>();
+        builder.Services.AddScoped<IWorkflowRepository, WorkflowRepository>();
+        builder.Services.AddScoped<IWorkflowStateRepository, WorkflowStateRepository>();
+        builder.Services.AddScoped<IWorkflowStateResponsibleRepository, WorkflowStateResponsibleRepository>();
+        builder.Services.AddScoped<IArtifactStateHistoryRepository, ArtifactStateHistoryRepository>();
+        builder.Services.AddScoped<IWorkflowPermissionRepository, WorkflowPermissionRepository>();
 
         // Registrar servicios
         builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -128,6 +136,14 @@ public partial class Program
         builder.Services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IAuthService, OpenUpTool.Infrastructure.Services.AuthService>();
+        builder.Services.AddScoped<IAuditLogService, OpenUpTool.Infrastructure.Services.AuditLogService>();
+        builder.Services.AddScoped<IMicroincrementService, MicroincrementService>();
+        builder.Services.AddScoped<IProjectClosureService, ProjectClosureService>();
+        builder.Services.AddScoped<IFinalBuildService, FinalBuildService>();
+        builder.Services.AddScoped<IWorkflowService, OpenUpTool.Infrastructure.Services.WorkflowService>();
+        builder.Services.AddScoped<IWorkflowStateService, OpenUpTool.Infrastructure.Services.WorkflowStateService>();
+        builder.Services.AddScoped<IArtifactStateService, OpenUpTool.Infrastructure.Services.ArtifactStateService>();
+        builder.Services.AddScoped<IWorkflowPermissionService, OpenUpTool.Infrastructure.Services.WorkflowPermissionService>();
         builder.Services.AddScoped<IFileStorageService>(sp =>
         {
             var env = sp.GetRequiredService<IWebHostEnvironment>();

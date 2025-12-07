@@ -32,9 +32,25 @@ public class ProjectRepository : IProjectRepository
             .ToListAsync();
 
         return await _context.Projects
-            .Where(p => projectIds.Contains(p.Id))
+            .Where(p => projectIds.Contains(p.Id) && !p.IsArchived)
             .Include(p => p.Phases.OrderBy(ph => ph.OrderIndex))
             .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Project>> GetArchivedProjectsForUserAsync(Guid userId)
+    {
+        // Obtener proyectos archivados donde el usuario tiene un rol asignado
+        var projectIds = await _context.ProjectUserRoles
+            .Where(pur => pur.UserId == userId && pur.Status == "active")
+            .Select(pur => pur.ProjectId)
+            .Distinct()
+            .ToListAsync();
+
+        return await _context.Projects
+            .Where(p => projectIds.Contains(p.Id) && p.IsArchived)
+            .Include(p => p.Phases.OrderBy(ph => ph.OrderIndex))
+            .OrderByDescending(p => p.ArchivedAt)
             .ToListAsync();
     }
 
@@ -551,6 +567,128 @@ public class DefectRepository : IDefectRepository
         if (defect != null)
         {
             _context.Defects.Remove(defect);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+
+public class ProjectClosureRepository : IProjectClosureRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public ProjectClosureRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<ProjectClosure>> GetAllAsync()
+    {
+        return await _context.ProjectClosures
+            .Include(c => c.Project)
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<ProjectClosure?> GetByIdAsync(Guid id)
+    {
+        return await _context.ProjectClosures
+            .Include(c => c.Project)
+            .FirstOrDefaultAsync(c => c.Id == id);
+    }
+
+    public async Task<ProjectClosure?> GetByProjectIdAsync(Guid projectId)
+    {
+        return await _context.ProjectClosures
+            .Include(c => c.Project)
+            .FirstOrDefaultAsync(c => c.ProjectId == projectId);
+    }
+
+    public async Task<ProjectClosure> CreateAsync(ProjectClosure closure)
+    {
+        _context.ProjectClosures.Add(closure);
+        await _context.SaveChangesAsync();
+        return closure;
+    }
+
+    public async Task<ProjectClosure> UpdateAsync(ProjectClosure closure)
+    {
+        _context.ProjectClosures.Update(closure);
+        await _context.SaveChangesAsync();
+        return closure;
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var closure = await _context.ProjectClosures.FindAsync(id);
+        if (closure != null)
+        {
+            _context.ProjectClosures.Remove(closure);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+
+public class FinalBuildRepository : IFinalBuildRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public FinalBuildRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<FinalBuild>> GetAllAsync()
+    {
+        return await _context.FinalBuilds
+            .Include(b => b.Project)
+            .OrderByDescending(b => b.BuildDate)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<FinalBuild>> GetByProjectIdAsync(Guid projectId)
+    {
+        return await _context.FinalBuilds
+            .Include(b => b.Project)
+            .Where(b => b.ProjectId == projectId)
+            .OrderByDescending(b => b.BuildDate)
+            .ToListAsync();
+    }
+
+    public async Task<FinalBuild?> GetByIdAsync(Guid id)
+    {
+        return await _context.FinalBuilds
+            .Include(b => b.Project)
+            .Include(b => b.Closure)
+            .FirstOrDefaultAsync(b => b.Id == id);
+    }
+
+    public async Task<FinalBuild?> GetByBuildNumberAsync(Guid projectId, string buildNumber)
+    {
+        return await _context.FinalBuilds
+            .Include(b => b.Project)
+            .FirstOrDefaultAsync(b => b.ProjectId == projectId && b.BuildNumber == buildNumber);
+    }
+
+    public async Task<FinalBuild> CreateAsync(FinalBuild build)
+    {
+        _context.FinalBuilds.Add(build);
+        await _context.SaveChangesAsync();
+        return build;
+    }
+
+    public async Task<FinalBuild> UpdateAsync(FinalBuild build)
+    {
+        _context.FinalBuilds.Update(build);
+        await _context.SaveChangesAsync();
+        return build;
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var build = await _context.FinalBuilds.FindAsync(id);
+        if (build != null)
+        {
+            _context.FinalBuilds.Remove(build);
             await _context.SaveChangesAsync();
         }
     }

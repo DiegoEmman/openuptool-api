@@ -6,6 +6,7 @@ public interface IProjectRepository
 {
     Task<IEnumerable<Project>> GetAllAsync();
     Task<IEnumerable<Project>> GetProjectsForUserAsync(Guid userId);
+    Task<IEnumerable<Project>> GetArchivedProjectsForUserAsync(Guid userId);
     Task<Project?> GetByIdAsync(Guid id);
     Task<Project> CreateAsync(Project project);
     Task<Project> UpdateAsync(Project project);
@@ -104,5 +105,86 @@ public interface IDefectRepository
     Task<string> GenerateNextDefectNumberAsync(Guid projectId);
     Task<Defect> CreateAsync(Defect defect);
     Task<Defect> UpdateAsync(Defect defect);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IMicroincrementRepository
+{
+    Task<IEnumerable<Microincrement>> GetAllAsync();
+    Task<IEnumerable<Microincrement>> GetByIterationIdAsync(Guid iterationId);
+    Task<IEnumerable<Microincrement>> GetByArtifactIdAsync(Guid artifactId);
+    Task<IEnumerable<Microincrement>> GetByAuthorAsync(string author);
+    Task<IEnumerable<Microincrement>> GetByTypeAsync(string type);
+    Task<IEnumerable<Microincrement>> GetFilteredAsync(Guid? iterationId, Guid? artifactId, string? author, string? type);
+    Task<Microincrement?> GetByIdAsync(Guid id);
+    Task<Microincrement> CreateAsync(Microincrement microincrement);
+    Task<Microincrement> UpdateAsync(Microincrement microincrement);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IProjectClosureRepository
+{
+    Task<IEnumerable<ProjectClosure>> GetAllAsync();
+    Task<ProjectClosure?> GetByIdAsync(Guid id);
+    Task<ProjectClosure?> GetByProjectIdAsync(Guid projectId);
+    Task<ProjectClosure> CreateAsync(ProjectClosure closure);
+    Task<ProjectClosure> UpdateAsync(ProjectClosure closure);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IFinalBuildRepository
+{
+    Task<IEnumerable<FinalBuild>> GetAllAsync();
+    Task<IEnumerable<FinalBuild>> GetByProjectIdAsync(Guid projectId);
+    Task<FinalBuild?> GetByIdAsync(Guid id);
+    Task<FinalBuild?> GetByBuildNumberAsync(Guid projectId, string buildNumber);
+    Task<FinalBuild> CreateAsync(FinalBuild build);
+    Task<FinalBuild> UpdateAsync(FinalBuild build);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IWorkflowRepository
+{
+    Task<IEnumerable<Workflow>> GetAllAsync();
+    Task<IEnumerable<Workflow>> GetByProjectIdAsync(Guid projectId);
+    Task<Workflow?> GetByIdAsync(Guid id);
+    Task<Workflow?> GetByIdWithStatesAsync(Guid id);
+    Task<Workflow> CreateAsync(Workflow workflow);
+    Task<Workflow> UpdateAsync(Workflow workflow);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IWorkflowStateRepository
+{
+    Task<IEnumerable<WorkflowState>> GetByWorkflowIdAsync(Guid workflowId);
+    Task<WorkflowState?> GetByIdAsync(Guid id);
+    Task<WorkflowState?> GetByIdWithResponsiblesAsync(Guid id);
+    Task<WorkflowState> CreateAsync(WorkflowState state);
+    Task<WorkflowState> UpdateAsync(WorkflowState state);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IWorkflowStateResponsibleRepository
+{
+    Task<IEnumerable<WorkflowStateResponsible>> GetByStateIdAsync(Guid stateId);
+    Task<WorkflowStateResponsible?> GetByIdAsync(Guid id);
+    Task<WorkflowStateResponsible> CreateAsync(WorkflowStateResponsible responsible);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IArtifactStateHistoryRepository
+{
+    Task<IEnumerable<ArtifactStateHistory>> GetByArtifactIdAsync(Guid artifactId);
+    Task<ArtifactStateHistory?> GetByIdAsync(Guid id);
+    Task<ArtifactStateHistory> CreateAsync(ArtifactStateHistory history);
+}
+
+public interface IWorkflowPermissionRepository
+{
+    Task<IEnumerable<WorkflowPermission>> GetByWorkflowIdAsync(Guid workflowId);
+    Task<WorkflowPermission?> GetByIdAsync(Guid id);
+    Task<WorkflowPermission?> GetByWorkflowRoleActionAsync(Guid workflowId, string role, string action);
+    Task<WorkflowPermission> CreateAsync(WorkflowPermission permission);
+    Task<WorkflowPermission> UpdateAsync(WorkflowPermission permission);
     Task DeleteAsync(Guid id);
 }

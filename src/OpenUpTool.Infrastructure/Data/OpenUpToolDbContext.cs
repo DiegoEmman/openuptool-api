@@ -30,6 +30,15 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<IterationScope> IterationScopes => Set<IterationScope>();
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Microincrement> Microincrements => Set<Microincrement>();
+    public DbSet<ProjectClosure> ProjectClosures => Set<ProjectClosure>();
+    public DbSet<FinalBuild> FinalBuilds => Set<FinalBuild>();
+    public DbSet<Workflow> Workflows => Set<Workflow>();
+    public DbSet<WorkflowState> WorkflowStates => Set<WorkflowState>();
+    public DbSet<WorkflowStateResponsible> WorkflowStateResponsibles => Set<WorkflowStateResponsible>();
+    public DbSet<ArtifactStateHistory> ArtifactStateHistories => Set<ArtifactStateHistory>();
+    public DbSet<WorkflowPermission> WorkflowPermissions => Set<WorkflowPermission>();
 
     public override int SaveChanges()
     {
@@ -228,6 +237,11 @@ public class OpenUpToolDbContext : DbContext
             entity.Property(e => e.StartDate).HasColumnName("start_date");
             entity.Property(e => e.EndDate).HasColumnName("end_date");
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+            // HU-016: Capacidad y velocidad
+            entity.Property(e => e.PlannedCapacityHours).HasColumnName("planned_capacity_hours");
+            entity.Property(e => e.TeamSize).HasColumnName("team_size");
+            entity.Property(e => e.PlannedPoints).HasColumnName("planned_points");
+            entity.Property(e => e.CompletedPoints).HasColumnName("completed_points");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
         });
@@ -342,6 +356,10 @@ public class OpenUpToolDbContext : DbContext
             entity.Property(e => e.TestData).HasColumnName("test_data");
             entity.Property(e => e.IterationData).HasColumnName("iteration_data");
             
+            // Campos de workflow
+            entity.Property(e => e.WorkflowId).HasColumnName("workflow_id");
+            entity.Property(e => e.CurrentStateId).HasColumnName("current_state_id");
+            
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             
@@ -349,6 +367,22 @@ public class OpenUpToolDbContext : DbContext
             entity.HasOne(e => e.Project)
                 .WithMany(p => p.Artifacts)
                 .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            // Relaciones con Workflow
+            entity.HasOne(e => e.Workflow)
+                .WithMany()
+                .HasForeignKey(e => e.WorkflowId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CurrentState)
+                .WithMany()
+                .HasForeignKey(e => e.CurrentStateId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(e => e.StateHistories)
+                .WithOne(h => h.Artifact)
+                .HasForeignKey(h => h.ArtifactId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
             // Índices para optimización
@@ -667,6 +701,240 @@ public class OpenUpToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ProjectClosure
+        modelBuilder.Entity<ProjectClosure>(entity =>
+        {
+            entity.ToTable("project_closures");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ClosedBy).HasColumnName("closed_by").IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ClosureDate).HasColumnName("closure_date").HasColumnType("timestamp");
+            entity.Property(e => e.Summary).HasColumnName("summary");
+            entity.Property(e => e.LessonsLearned).HasColumnName("lessons_learned");
+            entity.Property(e => e.Recommendations).HasColumnName("recommendations");
+            entity.Property(e => e.ChecklistData).HasColumnName("checklist_data").HasColumnType("jsonb");
+            entity.Property(e => e.AllMandatoryCriteriaMet).HasColumnName("all_mandatory_criteria_met");
+            entity.Property(e => e.TotalCriteria).HasColumnName("total_criteria");
+            entity.Property(e => e.CompletedCriteria).HasColumnName("completed_criteria");
+            entity.Property(e => e.MandatoryCriteria).HasColumnName("mandatory_criteria");
+            entity.Property(e => e.CompletedMandatoryCriteria).HasColumnName("completed_mandatory_criteria");
+            entity.Property(e => e.Status).HasColumnName("status").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason");
+            entity.Property(e => e.ApprovedAt).HasColumnName("approved_at").HasColumnType("timestamp");
+            entity.Property(e => e.ApprovedBy).HasColumnName("approved_by").HasMaxLength(200);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ProjectId).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        // FinalBuild
+        modelBuilder.Entity<FinalBuild>(entity =>
+        {
+            entity.ToTable("final_builds");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.BuildNumber).HasColumnName("build_number").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Version).HasColumnName("version").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.BuildTag).HasColumnName("build_tag").HasMaxLength(100);
+            entity.Property(e => e.CommitHash).HasColumnName("commit_hash").HasMaxLength(100);
+            entity.Property(e => e.BuildDate).HasColumnName("build_date").HasColumnType("timestamp");
+            entity.Property(e => e.BuiltBy).HasColumnName("built_by").IsRequired().HasMaxLength(200);
+            entity.Property(e => e.BuildEnvironment).HasColumnName("build_environment").HasMaxLength(100);
+            entity.Property(e => e.BuildConfiguration).HasColumnName("build_configuration").HasMaxLength(50);
+            entity.Property(e => e.BinaryArtifacts).HasColumnName("binary_artifacts").HasColumnType("jsonb");
+            entity.Property(e => e.MainDownloadUrl).HasColumnName("main_download_url").HasMaxLength(1000);
+            entity.Property(e => e.DocumentationUrl).HasColumnName("documentation_url").HasMaxLength(1000);
+            entity.Property(e => e.ReleaseNotesUrl).HasColumnName("release_notes_url").HasMaxLength(1000);
+            entity.Property(e => e.TargetPlatform).HasColumnName("target_platform").HasMaxLength(100);
+            entity.Property(e => e.Dependencies).HasColumnName("dependencies");
+            entity.Property(e => e.SystemRequirements).HasColumnName("system_requirements");
+            entity.Property(e => e.IsStable).HasColumnName("is_stable");
+            entity.Property(e => e.TestsPassed).HasColumnName("tests_passed");
+            entity.Property(e => e.TestsTotal).HasColumnName("tests_total");
+            entity.Property(e => e.CodeCoverage).HasColumnName("code_coverage");
+            entity.Property(e => e.QualityGateStatus).HasColumnName("quality_gate_status").HasMaxLength(50);
+            entity.Property(e => e.ClosureId).HasColumnName("closure_id");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Closure)
+                .WithMany()
+                .HasForeignKey(e => e.ClosureId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.ProjectId, e.BuildNumber }).IsUnique();
+            entity.HasIndex(e => e.BuildDate);
+            entity.HasIndex(e => e.Version);
+            entity.HasIndex(e => e.IsStable);
+        });
+
+        // Workflow
+        modelBuilder.Entity<Workflow>(entity =>
+        {
+            entity.ToTable("workflows");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.States)
+                .WithOne(s => s.Workflow)
+                .HasForeignKey(s => s.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // WorkflowState
+        modelBuilder.Entity<WorkflowState>(entity =>
+        {
+            entity.ToTable("workflow_states");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.WorkflowId).HasColumnName("workflow_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Order).HasColumnName("order");
+            entity.Property(e => e.Color).HasColumnName("color").HasMaxLength(7);
+            entity.Property(e => e.IsInitialState).HasColumnName("is_initial_state");
+            entity.Property(e => e.IsFinalState).HasColumnName("is_final_state");
+            entity.Property(e => e.RequiredActions).HasColumnName("required_actions").HasColumnType("jsonb");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasMany(e => e.Responsibles)
+                .WithOne(r => r.WorkflowState)
+                .HasForeignKey(r => r.WorkflowStateId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // WorkflowStateResponsible
+        modelBuilder.Entity<WorkflowStateResponsible>(entity =>
+        {
+            entity.ToTable("workflow_state_responsibles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.WorkflowStateId).HasColumnName("workflow_state_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(100);
+            entity.Property(e => e.AssignedAt).HasColumnName("assigned_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ArtifactStateHistory - Configuración especial para dos FKs hacia WorkflowState
+        modelBuilder.Entity<ArtifactStateHistory>(entity =>
+        {
+            entity.ToTable("artifact_state_history");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.FromStateId).HasColumnName("from_state_id");
+            entity.Property(e => e.ToStateId).HasColumnName("to_state_id");
+            entity.Property(e => e.ChangedByUserId).HasColumnName("changed_by_user_id");
+            entity.Property(e => e.ChangedAt).HasColumnName("changed_at").HasColumnType("timestamp");
+            entity.Property(e => e.Comments).HasColumnName("comments");
+            entity.Property(e => e.Metadata).HasColumnName("metadata").HasColumnType("jsonb");
+
+            // Relación con FromState (nullable, sin navegación inversa)
+            entity.HasOne(e => e.FromState)
+                .WithMany()
+                .HasForeignKey(e => e.FromStateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Relación con ToState (sin navegación inversa)
+            entity.HasOne(e => e.ToState)
+                .WithMany()
+                .HasForeignKey(e => e.ToStateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Relación con ChangedByUser
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.ArtifactId);
+            entity.HasIndex(e => e.ChangedAt);
+        });
+
+        // WorkflowPermission configuration
+        modelBuilder.Entity<WorkflowPermission>(entity =>
+        {
+            entity.ToTable("workflow_permissions");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.IsAllowed).HasDefaultValue(true);
+
+            entity.HasOne(e => e.Workflow)
+                .WithMany()
+                .HasForeignKey(e => e.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.WorkflowId, e.Role, e.Action }).IsUnique();
+            entity.HasIndex(e => e.WorkflowId);
+        });
+
+        // Microincrement configuration (HU-017)
+        modelBuilder.Entity<Microincrement>(entity =>
+        {
+            entity.ToTable("microincrements");
+            entity.HasKey(e => e.Id);
+            
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Date).HasColumnName("date");
+            entity.Property(e => e.Author).HasColumnName("author").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Type).HasColumnName("type").HasMaxLength(20).HasDefaultValue("funcional");
+            entity.Property(e => e.EvidenceUrl).HasColumnName("evidence_url").HasMaxLength(1000);
+            entity.Property(e => e.EvidenceFilePath).HasColumnName("evidence_file_path").HasMaxLength(500);
+            entity.Property(e => e.IterationId).HasColumnName("iteration_id");
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Iteration)
+                .WithMany()
+                .HasForeignKey(e => e.IterationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Artifact)
+                .WithMany()
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.IterationId);
+            entity.HasIndex(e => e.ArtifactId);
+            entity.HasIndex(e => e.Type);
         });
     }
 }

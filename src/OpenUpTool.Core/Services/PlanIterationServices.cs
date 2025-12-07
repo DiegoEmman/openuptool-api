@@ -181,7 +181,10 @@ public class IterationService : IIterationService
             Phase = dto.Phase,
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
-            Status = "Planeada"
+            Status = "Planeada",
+            PlannedCapacityHours = dto.PlannedCapacityHours,
+            TeamSize = dto.TeamSize,
+            PlannedPoints = dto.PlannedPoints
         };
 
         var created = await _iterationRepository.CreateAsync(iteration);
@@ -198,6 +201,147 @@ public class IterationService : IIterationService
         return MapToDto(updated);
     }
 
+    // HU-016: Actualizar capacidad del equipo
+    public async Task<IterationDto?> UpdateIterationCapacityAsync(Guid id, UpdateIterationCapacityDto dto)
+    {
+        var iteration = await _iterationRepository.GetByIdAsync(id);
+        if (iteration == null) return null;
+
+        if (dto.PlannedCapacityHours.HasValue)
+            iteration.PlannedCapacityHours = dto.PlannedCapacityHours;
+        if (dto.TeamSize.HasValue)
+            iteration.TeamSize = dto.TeamSize;
+        if (dto.PlannedPoints.HasValue)
+            iteration.PlannedPoints = dto.PlannedPoints;
+
+        iteration.UpdatedAt = DateTime.UtcNow;
+        var updated = await _iterationRepository.UpdateAsync(iteration);
+        return MapToDto(updated);
+    }
+
+    // HU-016: Registrar velocidad (puntos completados)
+    public async Task<IterationDto?> UpdateIterationVelocityAsync(Guid id, UpdateIterationVelocityDto dto)
+    {
+        var iteration = await _iterationRepository.GetByIdAsync(id);
+        if (iteration == null) return null;
+
+        iteration.PlannedPoints = dto.PlannedPoints;
+        iteration.CompletedPoints = dto.CompletedPoints;
+        iteration.UpdatedAt = DateTime.UtcNow;
+        var updated = await _iterationRepository.UpdateAsync(iteration);
+        return MapToDto(updated);
+    }
+
+    // HU-016: Obtener estadísticas de velocidad del proyecto
+    public async Task<ProjectVelocityStatsDto?> GetProjectVelocityStatsAsync(Guid projectId)
+    {
+        var iterations = (await _iterationRepository.GetByProjectIdAsync(projectId)).ToList();
+        if (!iterations.Any()) return null;
+
+        // Contar todas las iteraciones que tienen datos de puntos completados
+        var iterationsWithData = iterations
+            .Where(i => i.CompletedPoints.HasValue && i.CompletedPoints > 0)
+            .ToList();
+
+        var avgVelocity = iterationsWithData.Any() 
+            ? (decimal)iterationsWithData.Average(i => i.CompletedPoints ?? 0) 
+            : 0;
+
+        var avgCapacity = iterationsWithData.Any() && iterationsWithData.Any(i => i.PlannedCapacityHours.HasValue)
+            ? (decimal)iterationsWithData.Where(i => i.PlannedCapacityHours.HasValue).Average(i => i.PlannedCapacityHours ?? 0)
+            : 0;
+
+        var avgTeamSize = iterationsWithData.Any() && iterationsWithData.Any(i => i.TeamSize.HasValue)
+            ? (decimal)iterationsWithData.Where(i => i.TeamSize.HasValue).Average(i => i.TeamSize ?? 0)
+            : 0;
+
+        // Sugerencia basada en promedio de las últimas 3 iteraciones
+        var lastThree = iterationsWithData.OrderByDescending(i => i.EndDate).Take(3).ToList();
+        var suggestedPoints = lastThree.Any() 
+            ? (decimal)lastThree.Average(i => i.CompletedPoints ?? 0) 
+            : avgVelocity;
+
+        var totalCompletedPoints = iterationsWithData.Sum(i => i.CompletedPoints ?? 0);
+
+        var project = iterations.First().Project;
+
+        return new ProjectVelocityStatsDto(
+            projectId,
+            project?.Name ?? "Proyecto",
+            iterations.Count,
+            iterationsWithData.Count,
+            Math.Round(avgVelocity, 1),
+            Math.Round(avgCapacity, 1),
+            Math.Round(avgTeamSize, 1),
+            Math.Round(suggestedPoints, 0),
+            totalCompletedPoints,
+            iterations.OrderByDescending(i => i.EndDate).Select(MapToVelocityDto).ToList()
+        );
+    }
+
+    // HU-016: Obtener datos para planificación
+    public async Task<PlanningDataDto?> GetPlanningDataAsync(Guid projectId)
+    {
+        var iterations = (await _iterationRepository.GetByProjectIdAsync(projectId)).ToList();
+        if (!iterations.Any()) return null;
+
+        var iterationsWithData = iterations
+            .Where(i => i.CompletedPoints.HasValue && i.CompletedPoints > 0)
+            .OrderByDescending(i => i.EndDate)
+            .ToList();
+
+        var avgVelocity = iterationsWithData.Any() 
+            ? (decimal)iterationsWithData.Average(i => i.CompletedPoints ?? 0) 
+            : 0;
+
+        var avgCapacity = iterationsWithData.Any() && iterationsWithData.Any(i => i.PlannedCapacityHours.HasValue)
+            ? (decimal)iterationsWithData.Where(i => i.PlannedCapacityHours.HasValue).Average(i => i.PlannedCapacityHours ?? 0)
+            : 0;
+
+        // Sugerencia: promedio de últimas 3 iteraciones o promedio general
+        var lastThree = iterationsWithData.Take(3).ToList();
+        var suggestedPoints = lastThree.Any() 
+            ? (decimal)lastThree.Average(i => i.CompletedPoints ?? 0) 
+            : avgVelocity;
+
+        var lastTeamSize = iterationsWithData.FirstOrDefault()?.TeamSize;
+
+        // Generar recomendación
+        string recommendation;
+        if (!iterationsWithData.Any())
+        {
+            recommendation = "Sin datos historicos. Inicie con una estimacion conservadora y ajuste segun avance.";
+        }
+        else if (iterationsWithData.Count < 3)
+        {
+            recommendation = $"Datos limitados ({iterationsWithData.Count} iteracion(es)). Considere {Math.Round(suggestedPoints)} puntos. Ajuste segun capacidad real.";
+        }
+        else
+        {
+            recommendation = $"Basado en {iterationsWithData.Count} iteraciones, se sugiere planificar {Math.Round(suggestedPoints)} puntos para un alcance realista.";
+        }
+
+        var project = iterations.First().Project;
+
+        return new PlanningDataDto(
+            projectId,
+            project?.Name ?? "Proyecto",
+            Math.Round(avgVelocity, 1),
+            Math.Round(avgCapacity, 1),
+            Math.Round(suggestedPoints, 0),
+            lastTeamSize,
+            recommendation,
+            iterationsWithData.Take(5).Select(i => new IterationVelocitySummaryDto(
+                i.Name,
+                i.PlannedPoints,
+                i.CompletedPoints,
+                i.PlannedPoints.HasValue && i.PlannedPoints > 0 && i.CompletedPoints.HasValue
+                    ? Math.Round((decimal)i.CompletedPoints.Value / i.PlannedPoints.Value * 100, 1)
+                    : null
+            )).ToList()
+        );
+    }
+
     private static IterationDto MapToDto(Iteration iteration)
     {
         return new IterationDto(
@@ -209,7 +353,37 @@ public class IterationService : IIterationService
             iteration.StartDate,
             iteration.EndDate,
             iteration.Status,
+            iteration.PlannedCapacityHours,
+            iteration.TeamSize,
+            iteration.PlannedPoints,
+            iteration.CompletedPoints,
             iteration.CreatedAt
+        );
+    }
+
+    private static IterationVelocityDto MapToVelocityDto(Iteration iteration)
+    {
+        decimal? velocityPerHour = iteration.PlannedCapacityHours.HasValue && iteration.PlannedCapacityHours > 0 && iteration.CompletedPoints.HasValue
+            ? Math.Round((decimal)iteration.CompletedPoints.Value / iteration.PlannedCapacityHours.Value, 2)
+            : null;
+
+        decimal? pointsPerMember = iteration.TeamSize.HasValue && iteration.TeamSize > 0 && iteration.CompletedPoints.HasValue
+            ? Math.Round((decimal)iteration.CompletedPoints.Value / iteration.TeamSize.Value, 2)
+            : null;
+
+        return new IterationVelocityDto(
+            iteration.Id,
+            iteration.Name,
+            iteration.Phase,
+            iteration.StartDate,
+            iteration.EndDate,
+            iteration.Status,
+            iteration.PlannedCapacityHours,
+            iteration.TeamSize,
+            iteration.PlannedPoints,
+            iteration.CompletedPoints,
+            velocityPerHour,
+            pointsPerMember
         );
     }
 }
