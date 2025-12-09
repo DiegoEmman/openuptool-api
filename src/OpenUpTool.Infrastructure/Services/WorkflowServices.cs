@@ -1,6 +1,8 @@
 using OpenUpTool.Core.DTOs;
 using OpenUpTool.Core.Entities;
 using OpenUpTool.Core.Interfaces;
+using OpenUpTool.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace OpenUpTool.Infrastructure.Services;
 
@@ -141,15 +143,18 @@ public class WorkflowStateService : IWorkflowStateService
     private readonly IWorkflowStateRepository _stateRepository;
     private readonly IWorkflowStateResponsibleRepository _responsibleRepository;
     private readonly IWorkflowRepository _workflowRepository;
+    private readonly OpenUpToolDbContext _context;
 
     public WorkflowStateService(
         IWorkflowStateRepository stateRepository,
         IWorkflowStateResponsibleRepository responsibleRepository,
-        IWorkflowRepository workflowRepository)
+        IWorkflowRepository workflowRepository,
+        OpenUpToolDbContext context)
     {
         _stateRepository = stateRepository;
         _responsibleRepository = responsibleRepository;
         _workflowRepository = workflowRepository;
+        _context = context;
     }
 
     public async Task<IEnumerable<WorkflowStateDto>> GetStatesByWorkflowIdAsync(Guid workflowId)
@@ -220,11 +225,29 @@ public class WorkflowStateService : IWorkflowStateService
         if (state == null)
             throw new InvalidOperationException("Estado no encontrado");
 
+        // Resolver UserId desde email si se proporciona email
+        Guid userId;
+        if (dto.UserId.HasValue)
+        {
+            userId = dto.UserId.Value;
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.UserEmail))
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.UserEmail);
+            if (user == null)
+                throw new InvalidOperationException($"Usuario con email '{dto.UserEmail}' no encontrado");
+            userId = user.Id;
+        }
+        else
+        {
+            throw new InvalidOperationException("Debe proporcionar UserId o UserEmail");
+        }
+
         var responsible = new WorkflowStateResponsible
         {
             Id = Guid.NewGuid(),
             WorkflowStateId = dto.WorkflowStateId,
-            UserId = dto.UserId,
+            UserId = userId,
             Role = dto.Role
         };
 

@@ -273,6 +273,8 @@ public class ArtifactRepository : IArtifactRepository
     {
         return await _context.Artifacts
             .Include(a => a.ArtifactType)
+            .Include(a => a.Workflow)
+            .Include(a => a.CurrentState)
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 

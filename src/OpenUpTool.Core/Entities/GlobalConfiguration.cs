@@ -132,6 +132,7 @@ public class WorkflowStateTemplate
 public class CustomFieldDefinition
 {
     public Guid Id { get; set; }
+    public Guid ConfigurationId { get; set; }
     public Guid ArtifactTypeTemplateId { get; set; }
     public string FieldName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
@@ -145,6 +146,7 @@ public class CustomFieldDefinition
     public DateTime UpdatedAt { get; set; }
     
     // Navigation
+    public GlobalConfiguration Configuration { get; set; } = null!;
     public ArtifactTypeTemplate ArtifactTypeTemplate { get; set; } = null!;
 }
 

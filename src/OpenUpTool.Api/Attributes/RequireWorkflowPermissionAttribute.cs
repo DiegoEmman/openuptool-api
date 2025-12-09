@@ -118,6 +118,13 @@ public class RequireWorkflowPermissionAttribute : Attribute, IAsyncActionFilter
         // Mapear roles del sistema a roles de workflow
         var workflowRole = MapSystemRoleToWorkflowRole(userRole);
 
+        // ADMIN SIEMPRE TIENE PERMISO - bypass de validación
+        if (workflowRole.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        {
+            await next();
+            return;
+        }
+
         // Verificar permiso en la base de datos
         var permission = await dbContext.WorkflowPermissions
             .Where(p => p.WorkflowId == workflowId 

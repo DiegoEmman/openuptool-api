@@ -348,8 +348,110 @@ Proyectos (2)
 Tipos de Artefactos (6)
 └── Distribuidos por fase de OpenUP
 
+Configuración Global (1)
+├── OpenUP Standard
+│   ├── Roles (5): Project Manager, Developer, Analyst, Tester, Stakeholder
+│   ├── Fases (4): Inception, Elaboration, Construction, Transition
+│   ├── Tipos de Artefactos (7): Vision Doc, Use Case Model, Architecture Doc, etc.
+│   ├── Workflows (2): Document Review, Code Review
+│   └── Workflow States (8): Draft, In Review, Approved, etc.
+
 Notificaciones (2)
 └── Ejemplos de asignación y progreso
+```
+
+---
+
+## 🔄 Scripts de Migración de Base de Datos
+
+### Scripts de Inicialización (en orden)
+
+Los siguientes scripts se ejecutan automáticamente al crear/recrear la base de datos:
+
+1. **`001-create-extensions.sql`** - Extensiones de PostgreSQL (uuid-ossp)
+2. **`002-create-tables.sql`** - Tablas principales del sistema
+3. **`003-create-indexes.sql`** - Índices para optimización
+4. **`004-add-microincrements.sql`** - HU-017: Microincrementos técnicos
+5. **`005-alter-notifications.sql`** - Mejoras en notificaciones
+6. **`006-add-velocity-capacity.sql`** - HU-016: Velocidad y capacidad
+7. **`007-add-configuration-tables.sql`** - HU-018: Tablas de configuración global
+8. **`008-fix-configuration-columns.sql`** - HU-018: Correcciones iniciales
+9. **`009-add-missing-columns.sql`** - HU-018: Columnas adicionales
+10. **`010-fix-all-configuration-columns.sql`** - HU-018: Sincronización completa de schema
+11. **`011-fix-encoding-issues.sql`** - HU-018: Corrección de caracteres con acentos
+
+### Script 010: Sincronización Completa de Configuración
+
+El script `010-fix-all-configuration-columns.sql` realiza las siguientes correcciones:
+
+#### Artifact Type Templates
+
+-   Agrega `category` (VARCHAR 100) - Categoría del tipo de artefacto
+-   Agrega `allows_versioning` (BOOLEAN) - Si permite versionado
+-   Agrega `requires_approval` (BOOLEAN) - Si requiere aprobación
+-   Agrega `is_system` (BOOLEAN) - Si es un tipo del sistema
+
+#### Custom Field Definitions
+
+-   Agrega `validation_rules` (JSONB) - Reglas de validación para campos personalizados
+
+#### Workflow State Templates
+
+-   Renombra `state_name` → `name` - Normalización de nombres
+-   Renombra `is_final` → `is_final_state` - Consistencia con backend
+-   Agrega `is_initial_state` (BOOLEAN) - Marca estados iniciales
+-   Agrega `color` (VARCHAR 20) - Color para UI
+
+#### Configuration Change History
+
+-   Renombra `change_date` → `changed_at` - Consistencia con backend
+
+#### Índices de Rendimiento
+
+-   `idx_custom_field_definitions_artifact_type` - FK a artifact types
+-   `idx_artifact_type_templates_category` - Filtrado por categoría
+-   `idx_workflow_state_templates_initial` - Estados iniciales
+
+#### Valores por Defecto
+
+-   Actualiza artifact types de OpenUP con valores del sistema
+-   Establece colores por defecto (#808080) para estados de workflow
+-   Marca estados iniciales (DRAFT, NUEVO, PENDIENTE, DEVELOPMENT)
+
+### Script 011: Corrección de Encoding
+
+El script `011-fix-encoding-issues.sql` corrige caracteres con acentos mal codificados:
+
+**Corrige descripciones con acentos en:**
+
+-   Workflow templates: "revisión de documentos", "revisión de código"
+-   Workflow state templates: "En revisión", "En revisión de código"
+-   Artifact type templates: "visión del proyecto", "Código fuente"
+-   Phase templates: "concepción", "definición", "elaboración", "construcción", "transición"
+-   Global configuration: "Configuración estándar"
+-   Configuration change history: "Configuración inicial"
+
+**Nota importante sobre encoding:**
+Este script debe ejecutarse con codificación UTF-8 para que los caracteres con acentos se guarden correctamente. Usar:
+
+```powershell
+$PSDefaultParameterValues['*:Encoding'] = 'utf8'
+Get-Content .\011-fix-encoding-issues.sql -Encoding UTF8 | docker exec -i openuptool-db psql -U openuptool_user -d openuptool
+```
+
+### Ejecutar Migraciones Manualmente
+
+Si necesitas ejecutar las migraciones después de crear la base de datos:
+
+```powershell
+# Ejecutar un script específico
+Get-Content .\docker\init-scripts\010-fix-all-configuration-columns.sql | docker exec -i openuptool-db psql -U openuptool_user -d openuptool
+
+# O ejecutar todos en orden
+Get-ChildItem .\docker\init-scripts\*.sql | Sort-Object Name | ForEach-Object {
+    Write-Host "Ejecutando $_..." -ForegroundColor Cyan
+    Get-Content $_.FullName | docker exec -i openuptool-db psql -U openuptool_user -d openuptool
+}
 ```
 
 ---
@@ -365,6 +467,11 @@ Después de ejecutar `seed-data`, deberías poder:
 -   ✅ Ver user stories y su estado
 -   ✅ Ver notificaciones en el sistema
 -   ✅ Ver usuarios asignados a proyectos
+-   ✅ Acceder a la configuración global en `/configuration`
+-   ✅ Ver y editar roles, fases, tipos de artefactos
+-   ✅ Gestionar workflows y estados de workflow
+-   ✅ Crear campos personalizados para artefactos
+-   ✅ Ver historial de cambios de configuración
 
 ---
 

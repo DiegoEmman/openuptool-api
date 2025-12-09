@@ -986,6 +986,8 @@ public class OpenUpToolDbContext : DbContext
             entity.Property(e => e.Version).HasColumnName("version").HasDefaultValue(1);
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
             entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+            entity.Property(e => e.Tags).HasColumnName("tags");
+            entity.Property(e => e.ParentTemplateId).HasColumnName("parent_template_id");
             entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
@@ -1119,6 +1121,7 @@ public class OpenUpToolDbContext : DbContext
             entity.ToTable("custom_field_definitions");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
             entity.Property(e => e.ArtifactTypeTemplateId).HasColumnName("artifact_type_template_id");
             entity.Property(e => e.FieldName).HasColumnName("field_name").IsRequired().HasMaxLength(100);
             entity.Property(e => e.DisplayName).HasColumnName("display_name").IsRequired().HasMaxLength(255);
@@ -1131,11 +1134,17 @@ public class OpenUpToolDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
+            entity.HasOne(e => e.Configuration)
+                .WithMany()
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasOne(e => e.ArtifactTypeTemplate)
                 .WithMany(a => a.CustomFields)
                 .HasForeignKey(e => e.ArtifactTypeTemplateId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasIndex(e => e.ConfigurationId);
             entity.HasIndex(e => e.ArtifactTypeTemplateId);
         });
 

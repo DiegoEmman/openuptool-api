@@ -61,7 +61,8 @@ public class ArtifactService : IArtifactService
             FileCategory = dto.FileCategory,
             RepositoryUrl = dto.RepositoryUrl?.Trim(),
             RepositoryVersion = dto.RepositoryVersion?.Trim(),
-            BuildNumber = dto.BuildNumber?.Trim()
+            BuildNumber = dto.BuildNumber?.Trim(),
+            WorkflowId = dto.WorkflowId
         };
 
         // Si hay archivo adjunto, guardarlo

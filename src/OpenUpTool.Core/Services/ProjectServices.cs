@@ -189,7 +189,10 @@ public class ProjectService : IProjectService
             project.PlanId,
             project.Phases?.Select(p => p.PhaseCode).ToList() ?? new List<string> { "INCEPTION", "ELABORATION", "CONSTRUCTION", "TRANSITION" },
             project.CreatedAt,
-            project.UpdatedAt
+            project.UpdatedAt,
+            project.IsArchived,
+            project.ArchivedAt,
+            project.ArchivedBy
         );
     }
 }

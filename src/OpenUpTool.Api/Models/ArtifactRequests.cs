@@ -17,6 +17,7 @@ public class CreateArtifactRequest
     public string? RepositoryUrl { get; set; }
     public string? RepositoryVersion { get; set; }
     public string? BuildNumber { get; set; }
+    public Guid? WorkflowId { get; set; }
     public IFormFile? File { get; set; }
 }
 

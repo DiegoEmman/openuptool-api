@@ -44,27 +44,66 @@ public class DatabaseManagementController : ControllerBase
             return Ok(new 
             { 
                 message = "Base de datos recreada exitosamente. Todas las tablas han sido creadas.",
+                totalTablas = 40,
                 tablas = new[]
                 {
-                    "Roles",
-                    "Users",
-                    "Projects",
-                    "Phases",
-                    "ProjectPlans",
-                    "Milestones",
-                    "Iterations",
-                    "IterationTasks",
-                    "IterationProgress",
-                    "ArtifactTypes",
-                    "Artifacts",
-                    "ArtifactVersions",
-                    "TestExecutions",
-                    "Defects",
-                    "UserStories",
-                    "IterationScope",
-                    "ProjectUserRoles",
-                    "ProjectInvitations",
-                    "Notifications"
+                    // Configuración global y templates
+                    "global_configurations",
+                    "artifact_type_templates",
+                    "configuration_change_history",
+                    "phase_templates",
+                    "role_templates",
+                    "workflow_templates",
+                    "workflow_state_templates",
+                    "custom_field_definitions",
+                    
+                    // Usuarios y roles
+                    "roles",
+                    "users",
+                    
+                    // Proyectos
+                    "projects",
+                    "project_configurations",
+                    "project_plans",
+                    "project_closures",
+                    "project_user_roles",
+                    "project_invitations",
+                    
+                    // Fases e iteraciones
+                    "phases",
+                    "iterations",
+                    "iteration_progress",
+                    "iteration_tasks",
+                    "iteration_scope",
+                    "milestones",
+                    
+                    // Workflows
+                    "workflows",
+                    "workflow_states",
+                    "workflow_permissions",
+                    "workflow_state_responsibles",
+                    
+                    // Artefactos
+                    "artifact_types",
+                    "artifacts",
+                    "artifact_versions",
+                    "artifact_custom_field_values",
+                    "artifact_movement_histories",
+                    "artifact_state_history",
+                    
+                    // Historias de usuario y construcción
+                    "user_stories",
+                    "microincrements",
+                    "final_builds",
+                    
+                    // Testing y defectos
+                    "test_executions",
+                    "defects",
+                    
+                    // Notificaciones y auditoría
+                    "notifications",
+                    "notification_preferences",
+                    "AuditLogs"
                 }
             });
         }
@@ -1642,6 +1681,795 @@ public class DatabaseManagementController : ControllerBase
                 _logger.LogInformation("✅ Workflow asignado a artefacto con historial");
             }
 
+            // 25. Crear Configuración Global
+            var globalConfiguration = new GlobalConfiguration
+            {
+                Id = Guid.NewGuid(),
+                Name = "OpenUP Standard Configuration",
+                Description = "Configuración estándar OpenUP con roles, fases, tipos de artefactos y workflows predefinidos",
+                Version = 1,
+                IsActive = true,
+                IsDefault = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedBy = "System"
+            };
+            await _context.GlobalConfigurations.AddAsync(globalConfiguration);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Configuración global creada");
+
+            // 26. Crear Plantillas de Tipos de Artefactos
+            var artifactTypeTemplates = new[]
+            {
+                new ArtifactTypeTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Vision Document Template",
+                    Description = "Plantilla estándar para documentos de visión según OpenUP",
+                    PhaseCode = "INCEPTION",
+                    Code = "VIS-TPL",
+                    DefaultFormat = "TEXT",
+                    IsMandatory = true,
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new ArtifactTypeTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Architecture Notebook Template",
+                    Description = "Plantilla para cuaderno de arquitectura",
+                    PhaseCode = "ELABORATION",
+                    Code = "ARCH-TPL",
+                    DefaultFormat = "MIXED",
+                    IsMandatory = true,
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new ArtifactTypeTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Test Case Template",
+                    Description = "Plantilla para casos de prueba",
+                    PhaseCode = "CONSTRUCTION",
+                    Code = "TST-TPL",
+                    DefaultFormat = "TEXT",
+                    IsMandatory = true,
+                    OrderIndex = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.ArtifactTypeTemplates.AddRangeAsync(artifactTypeTemplates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Plantillas de tipos de artefactos creadas");
+
+            // 27. Crear Plantillas de Fases
+            var phaseTemplates = new[]
+            {
+                new PhaseTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Inception Phase Template",
+                    Description = "Plantilla estándar para fase de Inicio según OpenUP",
+                    PhaseCode = "INCEPTION",
+                    DefaultDurationDays = 14,
+                    IsMandatory = true,
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new PhaseTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Elaboration Phase Template",
+                    Description = "Plantilla para fase de Elaboración",
+                    PhaseCode = "ELABORATION",
+                    DefaultDurationDays = 28,
+                    IsMandatory = true,
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new PhaseTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Construction Phase Template",
+                    Description = "Plantilla para fase de Construcción",
+                    PhaseCode = "CONSTRUCTION",
+                    DefaultDurationDays = 56,
+                    IsMandatory = true,
+                    OrderIndex = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new PhaseTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Transition Phase Template",
+                    Description = "Plantilla para fase de Transición",
+                    PhaseCode = "TRANSITION",
+                    DefaultDurationDays = 14,
+                    IsMandatory = true,
+                    OrderIndex = 4,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.PhaseTemplates.AddRangeAsync(phaseTemplates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Plantillas de fases creadas");
+
+            // 28. Crear Plantillas de Roles
+            var roleTemplates = new[]
+            {
+                new RoleTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Product Owner",
+                    Description = "Responsable de definir y priorizar requisitos",
+                    Permissions = "[\"CREATE_PROJECT\",\"EDIT_REQUIREMENTS\",\"APPROVE_DELIVERABLES\"]",
+                    OrderIndex = 1,
+                    IsSystem = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new RoleTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Scrum Master",
+                    Description = "Facilita el proceso y elimina impedimentos",
+                    Permissions = "[\"VIEW_PROJECTS\",\"MANAGE_SPRINTS\",\"REMOVE_IMPEDIMENTS\"]",
+                    OrderIndex = 2,
+                    IsSystem = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new RoleTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Software Architect",
+                    Description = "Define la arquitectura técnica del sistema",
+                    Permissions = "[\"VIEW_PROJECTS\",\"EDIT_ARCHITECTURE\",\"REVIEW_CODE\",\"APPROVE_DESIGN\"]",
+                    OrderIndex = 3,
+                    IsSystem = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.RoleTemplates.AddRangeAsync(roleTemplates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Plantillas de roles creadas");
+
+            // 29. Crear Plantillas de Workflows
+            var workflowTemplates = new[]
+            {
+                new WorkflowTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Document Review Workflow",
+                    Description = "Flujo estándar para revisión de documentos",
+                    IsDefault = true,
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    Name = "Code Development Workflow",
+                    Description = "Flujo para desarrollo de código fuente",
+                    IsDefault = false,
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.WorkflowTemplates.AddRangeAsync(workflowTemplates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Plantillas de workflows creadas");
+
+            // 30. Crear Configuraciones de Proyecto
+            var projectConfigurations = new[]
+            {
+                new ProjectConfiguration
+                {
+                    Id = Guid.NewGuid(),
+                    ProjectId = projects[0].Id, // SGE
+                    ConfigurationId = globalConfiguration.Id,
+                    AppliedVersion = 1,
+                    AppliedAt = now,
+                    AppliedBy = "admin@openuptool.com",
+                    AutoUpdate = true
+                },
+                new ProjectConfiguration
+                {
+                    Id = Guid.NewGuid(),
+                    ProjectId = projects[1].Id, // AMB
+                    ConfigurationId = globalConfiguration.Id,
+                    AppliedVersion = 1,
+                    AppliedAt = now,
+                    AppliedBy = "admin@openuptool.com",
+                    AutoUpdate = false
+                }
+            };
+            await _context.ProjectConfigurations.AddRangeAsync(projectConfigurations);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Configuraciones de proyecto creadas");
+
+            // 31. Crear Microincrementos
+            var firstIterationId = await _context.Iterations.Where(i => i.ProjectId == projects[0].Id).Select(i => i.Id).FirstOrDefaultAsync();
+            var microincrements = new[]
+            {
+                new Microincrement
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = firstIterationId,
+                    ArtifactId = artifacts[0].Id,
+                    Title = "API de Autenticación",
+                    Description = "Implementación completa del módulo de autenticación JWT",
+                    Type = "tecnico",
+                    Date = now.AddDays(-10),
+                    Author = "Ana Martínez",
+                    EvidenceUrl = "https://github.com/example/commit/abc123",
+                    CreatedAt = now.AddDays(-12),
+                    UpdatedAt = now.AddDays(-6)
+                },
+                new Microincrement
+                {
+                    Id = Guid.NewGuid(),
+                    IterationId = firstIterationId,
+                    ArtifactId = artifacts[1].Id,
+                    Title = "Dashboard Principal",
+                    Description = "Pantalla principal con KPIs y gráficos",
+                    Type = "funcional",
+                    Date = now.AddDays(-5),
+                    Author = "Luis Torres",
+                    EvidenceFilePath = "/uploads/dashboard-screenshot.png",
+                    CreatedAt = now.AddDays(-7),
+                    UpdatedAt = now
+                }
+            };
+            await _context.Microincrements.AddRangeAsync(microincrements);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Microincrementos creados");
+
+            // 32. Crear Final Builds
+            var finalBuilds = new[]
+            {
+                new FinalBuild
+                {
+                    Id = Guid.NewGuid(),
+                    ProjectId = projects[0].Id,
+                    Version = "1.0.0-alpha",
+                    BuildNumber = "20241209.1",
+                    BuildTag = "v1.0.0-alpha",
+                    CommitHash = "a1b2c3d4e5f6",
+                    BuildDate = now.AddDays(-3),
+                    BuiltBy = "Carlos Ramírez",
+                    BuildEnvironment = "GitHub Actions",
+                    BuildConfiguration = "Release",
+                    BinaryArtifacts = "[{\"name\":\"sge-1.0.0-alpha.zip\",\"type\":\"PACKAGE\",\"filePath\":\"/builds/sge/1.0.0-alpha/sge-1.0.0-alpha.zip\",\"size\":25600000,\"checksum\":\"abc123def456\",\"checksumType\":\"SHA256\"}]",
+                    MainDownloadUrl = "https://releases.openuptool.com/sge/v1.0.0-alpha/sge-1.0.0-alpha.zip",
+                    ReleaseNotesUrl = "https://releases.openuptool.com/sge/v1.0.0-alpha/notes.html",
+                    TargetPlatform = "Web",
+                    IsStable = false,
+                    TestsPassed = 127,
+                    TestsTotal = 127,
+                    CodeCoverage = 82.5,
+                    QualityGateStatus = "Passed",
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now.AddDays(-3)
+                }
+            };
+            await _context.FinalBuilds.AddRangeAsync(finalBuilds);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Final Builds creados");
+
+            // 33. Crear Estados de Workflow Templates
+            var workflowStateTemplates = new[]
+            {
+                // Estados para "Document Review Workflow"
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[0].Id,
+                    Name = "Borrador",
+                    Description = "Documento en elaboración",
+                    OrderIndex = 1,
+                    Color = "#9E9E9E",
+                    IsInitialState = true,
+                    IsFinalState = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[0].Id,
+                    Name = "En Revisión",
+                    Description = "Documento siendo revisado",
+                    OrderIndex = 2,
+                    Color = "#FF9800",
+                    IsInitialState = false,
+                    IsFinalState = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[0].Id,
+                    Name = "Aprobado",
+                    Description = "Documento aprobado",
+                    OrderIndex = 3,
+                    Color = "#4CAF50",
+                    IsInitialState = false,
+                    IsFinalState = true,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                // Estados para "Code Development Workflow"
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[1].Id,
+                    Name = "En Desarrollo",
+                    Description = "Código en desarrollo",
+                    OrderIndex = 1,
+                    Color = "#2196F3",
+                    IsInitialState = true,
+                    IsFinalState = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[1].Id,
+                    Name = "Code Review",
+                    Description = "Revisión de código",
+                    OrderIndex = 2,
+                    Color = "#9C27B0",
+                    IsInitialState = false,
+                    IsFinalState = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[1].Id,
+                    Name = "Testing",
+                    Description = "En pruebas",
+                    OrderIndex = 3,
+                    Color = "#FF5722",
+                    IsInitialState = false,
+                    IsFinalState = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new WorkflowStateTemplate
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowTemplateId = workflowTemplates[1].Id,
+                    Name = "Completado",
+                    Description = "Código completado y desplegado",
+                    OrderIndex = 4,
+                    Color = "#4CAF50",
+                    IsInitialState = false,
+                    IsFinalState = true,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.WorkflowStateTemplates.AddRangeAsync(workflowStateTemplates);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Estados de workflow templates creados");
+
+            // 34. Crear Campos Personalizados para Artifact Types
+            var customFieldDefinitions = new[]
+            {
+                // Campos para Vision Document Template
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[0].Id,
+                    FieldName = "budget",
+                    DisplayName = "Presupuesto Estimado",
+                    FieldType = "NUMBER",
+                    IsRequired = true,
+                    DefaultValue = "0",
+                    Options = null,
+                    ValidationRules = "{\"min\":0,\"max\":10000000}",
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[0].Id,
+                    FieldName = "stakeholders",
+                    DisplayName = "Stakeholders Principales",
+                    FieldType = "TEXT",
+                    IsRequired = true,
+                    DefaultValue = null,
+                    Options = null,
+                    ValidationRules = "{\"maxLength\":500}",
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[0].Id,
+                    FieldName = "priority",
+                    DisplayName = "Prioridad",
+                    FieldType = "SELECT",
+                    IsRequired = true,
+                    DefaultValue = "MEDIUM",
+                    Options = "[\"HIGH\",\"MEDIUM\",\"LOW\"]",
+                    ValidationRules = null,
+                    OrderIndex = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                // Campos para Architecture Notebook
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[1].Id,
+                    FieldName = "architecture_pattern",
+                    DisplayName = "Patrón Arquitectónico",
+                    FieldType = "SELECT",
+                    IsRequired = true,
+                    DefaultValue = "LAYERED",
+                    Options = "[\"LAYERED\",\"MICROSERVICES\",\"MVC\",\"HEXAGONAL\",\"EVENT_DRIVEN\"]",
+                    ValidationRules = null,
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[1].Id,
+                    FieldName = "technologies",
+                    DisplayName = "Tecnologías Utilizadas",
+                    FieldType = "MULTISELECT",
+                    IsRequired = false,
+                    DefaultValue = null,
+                    Options = "[\"React\",\"Angular\",\"Vue\",\".NET\",\"Java\",\"Python\",\"Node.js\",\"PostgreSQL\",\"MongoDB\",\"Redis\"]",
+                    ValidationRules = null,
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                // Campos para Test Case Template
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[2].Id,
+                    FieldName = "test_priority",
+                    DisplayName = "Prioridad de Prueba",
+                    FieldType = "NUMBER",
+                    IsRequired = true,
+                    DefaultValue = "3",
+                    Options = null,
+                    ValidationRules = "{\"min\":1,\"max\":5}",
+                    OrderIndex = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[2].Id,
+                    FieldName = "automated",
+                    DisplayName = "Test Automatizado",
+                    FieldType = "BOOLEAN",
+                    IsRequired = false,
+                    DefaultValue = "false",
+                    Options = null,
+                    ValidationRules = null,
+                    OrderIndex = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                },
+                new CustomFieldDefinition
+                {
+                    Id = Guid.NewGuid(),
+                    ConfigurationId = globalConfiguration.Id,
+                    ArtifactTypeTemplateId = artifactTypeTemplates[2].Id,
+                    FieldName = "test_type",
+                    DisplayName = "Tipo de Prueba",
+                    FieldType = "SELECT",
+                    IsRequired = true,
+                    DefaultValue = "FUNCTIONAL",
+                    Options = "[\"FUNCTIONAL\",\"INTEGRATION\",\"UNIT\",\"E2E\",\"PERFORMANCE\",\"SECURITY\"]",
+                    ValidationRules = null,
+                    OrderIndex = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }
+            };
+            await _context.CustomFieldDefinitions.AddRangeAsync(customFieldDefinitions);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Campos personalizados creados");
+
+            // 35. Crear más artefactos de CONSTRUCTION
+            var constructionPhase = phases.FirstOrDefault(p => p.PhaseCode == "CONSTRUCTION");
+            if (constructionPhase != null)
+            {
+                var constructionArtifactTypes = await _context.ArtifactTypes
+                    .Where(at => at.Phase == "CONSTRUCTION")
+                    .ToListAsync();
+
+                var constructionArtifacts = new List<Artifact>();
+                
+                foreach (var artifactType in constructionArtifactTypes.Take(5))
+                {
+                    constructionArtifacts.Add(new Artifact
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = projects[0].Id,
+                        PhaseId = "CONSTRUCTION",
+                        ArtifactTypeId = artifactType.Id,
+                        Title = $"{artifactType.Name} - SGE",
+                        Description = $"Implementación de {artifactType.Name.ToLower()} para el proyecto SGE",
+                        ContentText = $"# {artifactType.Name}\n\nContenido del artefacto para la fase de construcción.\n\n## Detalles de Implementación\n\nEste documento detalla la implementación realizada durante la fase de construcción.",
+                        IsMandatory = artifactType.IsMandatory,
+                        Status = "En Progreso",
+                        Author = $"{users[4].FirstName} {users[4].LastName}",
+                        CreatedAt = now.AddDays(-15),
+                        UpdatedAt = now.AddDays(-2)
+                    });
+                }
+
+                await _context.Artifacts.AddRangeAsync(constructionArtifacts);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"✅ {constructionArtifacts.Count} artefactos de construcción creados");
+            }
+
+            // 36. Crear Audit Logs
+            var auditLogs = new[]
+            {
+                // Logs de proyectos
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[0].Id,
+                    Action = "PROJECT_CREATED",
+                    EntityType = "Project",
+                    EntityId = projects[0].Id,
+                    Details = "{\"projectName\":\"Sistema de Gestión Educativa\",\"phase\":\"INCEPTION\"}",
+                    CreatedAt = now.AddDays(-30)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "PROJECT_UPDATED",
+                    EntityType = "Project",
+                    EntityId = projects[0].Id,
+                    Details = "{\"field\":\"description\",\"oldValue\":\"Sistema inicial\",\"newValue\":\"Sistema completo de gestión educativa\"}",
+                    CreatedAt = now.AddDays(-28)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[0].Id,
+                    Action = "PROJECT_CREATED",
+                    EntityType = "Project",
+                    EntityId = projects[1].Id,
+                    Details = "{\"projectName\":\"App Móvil Bancaria\",\"phase\":\"INCEPTION\"}",
+                    CreatedAt = now.AddDays(-25)
+                },
+                // Logs de artefactos
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[4].Id,
+                    Action = "ARTIFACT_CREATED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"artifactName\":\"Documento de Visión\",\"phase\":\"INCEPTION\"}",
+                    CreatedAt = now.AddDays(-22)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[3].Id,
+                    Action = "ARTIFACT_UPDATED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"field\":\"content\",\"version\":2}",
+                    CreatedAt = now.AddDays(-20)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[5].Id,
+                    Action = "ARTIFACT_VERSION_CREATED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"version\":3,\"changes\":\"Actualización de requisitos\"}",
+                    CreatedAt = now.AddDays(-18)
+                },
+                // Logs de usuarios
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[0].Id,
+                    Action = "USER_ROLE_ASSIGNED",
+                    EntityType = "User",
+                    EntityId = users[4].Id,
+                    Details = "{\"role\":\"Developer\",\"project\":\"SGE\"}",
+                    CreatedAt = now.AddDays(-27)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "USER_INVITED",
+                    EntityType = "User",
+                    EntityId = users[6].Id,
+                    Details = "{\"email\":\"laura.fernandez@openuptool.com\",\"role\":\"Developer\",\"project\":\"SGE\"}",
+                    CreatedAt = now.AddDays(-24)
+                },
+                // Logs de iteraciones
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "ITERATION_CREATED",
+                    EntityType = "Iteration",
+                    EntityId = null,
+                    Details = "{\"iterationName\":\"Sprint 1\",\"duration\":14}",
+                    CreatedAt = now.AddDays(-21)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "ITERATION_COMPLETED",
+                    EntityType = "Iteration",
+                    EntityId = null,
+                    Details = "{\"iterationName\":\"Sprint 1\",\"completedStories\":5}",
+                    CreatedAt = now.AddDays(-7)
+                },
+                // Logs de workflows
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[3].Id,
+                    Action = "WORKFLOW_ASSIGNED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"workflowName\":\"Flujo de Revisión de Documentos\"}",
+                    CreatedAt = now.AddDays(-19)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[4].Id,
+                    Action = "ARTIFACT_STATE_CHANGED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"fromState\":\"Borrador\",\"toState\":\"En Revisión\",\"workflow\":\"Flujo de Revisión de Documentos\"}",
+                    CreatedAt = now.AddDays(-17)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "ARTIFACT_STATE_CHANGED",
+                    EntityType = "Artifact",
+                    EntityId = artifacts[0].Id,
+                    Details = "{\"fromState\":\"En Revisión\",\"toState\":\"Aprobado\",\"workflow\":\"Flujo de Revisión de Documentos\"}",
+                    CreatedAt = now.AddDays(-15)
+                },
+                // Logs de defectos
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[7].Id,
+                    Action = "DEFECT_CREATED",
+                    EntityType = "Defect",
+                    EntityId = null,
+                    Details = "{\"severity\":\"CRITICAL\",\"title\":\"Error en autenticación\"}",
+                    CreatedAt = now.AddDays(-10)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[4].Id,
+                    Action = "DEFECT_RESOLVED",
+                    EntityType = "Defect",
+                    EntityId = null,
+                    Details = "{\"defectId\":\"DEF-001\",\"resolution\":\"Corregido en commit abc123\"}",
+                    CreatedAt = now.AddDays(-8)
+                },
+                // Logs de builds
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[3].Id,
+                    Action = "BUILD_CREATED",
+                    EntityType = "FinalBuild",
+                    EntityId = finalBuilds[0].Id,
+                    Details = "{\"version\":\"1.0.0-alpha\",\"buildNumber\":\"20241209.1\",\"status\":\"Success\"}",
+                    CreatedAt = now.AddDays(-3)
+                },
+                // Logs de configuración
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[0].Id,
+                    Action = "CONFIGURATION_APPLIED",
+                    EntityType = "ProjectConfiguration",
+                    EntityId = projectConfigurations[0].Id,
+                    Details = "{\"configurationName\":\"OpenUP Standard Configuration\",\"version\":1}",
+                    CreatedAt = now.AddDays(-26)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "WORKFLOW_CREATED",
+                    EntityType = "Workflow",
+                    EntityId = workflows[0].Id,
+                    Details = "{\"workflowName\":\"Flujo de Revisión de Documentos\",\"statesCount\":3}",
+                    CreatedAt = now.AddDays(-23)
+                },
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "WORKFLOW_CREATED",
+                    EntityType = "Workflow",
+                    EntityId = workflows[1].Id,
+                    Details = "{\"workflowName\":\"Flujo de Desarrollo de Código\",\"statesCount\":4}",
+                    CreatedAt = now.AddDays(-23)
+                },
+                // Logs de milestones
+                new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = users[1].Id,
+                    Action = "MILESTONE_COMPLETED",
+                    EntityType = "Milestone",
+                    EntityId = milestones[0].Id,
+                    Details = "{\"milestoneName\":\"Entrega Alpha\",\"completionDate\":\"2024-12-06\"}",
+                    CreatedAt = now.AddDays(-3)
+                }
+            };
+            await _context.AuditLogs.AddRangeAsync(auditLogs);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation($"✅ {auditLogs.Length} audit logs creados");
+
             _logger.LogInformation("🎉 Siembra de datos completada exitosamente");
 
             return Ok(new
@@ -1652,17 +2480,27 @@ public class DatabaseManagementController : ControllerBase
                     roles = roles.Length,
                     usuarios = 10,
                     proyectos = projects.Length,
+                    globalConfigurations = 1,
+                    artifactTypeTemplates = artifactTypeTemplates.Length,
+                    phaseTemplates = phaseTemplates.Length,
+                    roleTemplates = roleTemplates.Length,
+                    workflowTemplates = workflowTemplates.Length,
+                    workflowStateTemplates = workflowStateTemplates.Length,
+                    customFieldDefinitions = customFieldDefinitions.Length,
+                    projectConfigurations = projectConfigurations.Length,
                     fases = phases.Count,
                     planesProyecto = projectPlans.Length,
                     milestones = milestones.Length,
                     tiposArtefactos = 30,
-                    artefactos = artifacts.Length,
+                    artefactos = artifacts.Length + 5, // includes construction artifacts
                     versionesArtefactos = artifactVersions.Length,
                     iteraciones = 2,
                     tareasIteracion = 4,
                     progresoIteracion = 3,
                     userStories = 3,
                     alcanceIteracion = 2,
+                    microincrements = microincrements.Length,
+                    finalBuilds = finalBuilds.Length,
                     asignacionesProyecto = 11,
                     ejecucionesPrueba = 4,
                     defectos = 5,
@@ -1671,7 +2509,8 @@ public class DatabaseManagementController : ControllerBase
                     estadosWorkflow = workflowStates.Length,
                     responsablesEstados = stateResponsibles.Length,
                     historialEstadosArtefacto = 2,
-                    permisosWorkflow = workflowPermissions.Length
+                    permisosWorkflow = workflowPermissions.Length,
+                    auditLogs = auditLogs.Length
                 },
                 credenciales = new
                 {
@@ -1708,23 +2547,60 @@ public class DatabaseManagementController : ControllerBase
 
             var counts = new
             {
+                // Tablas de configuración y templates
+                globalConfigurations = await _context.GlobalConfigurations.CountAsync(),
+                artifactTypeTemplates = await _context.ArtifactTypeTemplates.CountAsync(),
+                phaseTemplates = await _context.PhaseTemplates.CountAsync(),
+                roleTemplates = await _context.RoleTemplates.CountAsync(),
+                workflowTemplates = await _context.WorkflowTemplates.CountAsync(),
+                
+                // Usuarios y roles
                 roles = await _context.Roles.CountAsync(),
                 usuarios = await _context.Users.CountAsync(),
+                
+                // Proyectos
                 proyectos = await _context.Projects.CountAsync(),
-                fases = await _context.Phases.CountAsync(),
+                projectConfigurations = await _context.ProjectConfigurations.CountAsync(),
                 planesProyecto = await _context.ProjectPlans.CountAsync(),
+                projectClosures = await _context.ProjectClosures.CountAsync(),
+                projectUserRoles = await _context.ProjectUserRoles.CountAsync(),
+                projectInvitations = await _context.ProjectInvitations.CountAsync(),
+                
+                // Fases e iteraciones
+                fases = await _context.Phases.CountAsync(),
+                iteraciones = await _context.Iterations.CountAsync(),
+                iterationProgress = await _context.IterationProgresses.CountAsync(),
+                tareasIteracion = await _context.IterationTasks.CountAsync(),
+                alcanceIteracion = await _context.IterationScopes.CountAsync(),
                 milestones = await _context.Milestones.CountAsync(),
+                
+                // Workflows
+                workflows = await _context.Workflows.CountAsync(),
+                workflowStates = await _context.WorkflowStates.CountAsync(),
+                workflowPermissions = await _context.WorkflowPermissions.CountAsync(),
+                workflowStateResponsibles = await _context.WorkflowStateResponsibles.CountAsync(),
+                
+                // Artefactos
                 tiposArtefactos = await _context.ArtifactTypes.CountAsync(),
                 artefactos = await _context.Artifacts.CountAsync(),
                 versionesArtefactos = await _context.ArtifactVersions.CountAsync(),
-                iteraciones = await _context.Iterations.CountAsync(),
-                tareasIteracion = await _context.IterationTasks.CountAsync(),
-                progresoIteracion = await _context.IterationProgresses.CountAsync(),
+                artifactCustomFieldValues = await _context.ArtifactCustomFieldValues.CountAsync(),
+                artifactMovementHistories = await _context.ArtifactMovementHistories.CountAsync(),
+                artifactStateHistory = await _context.ArtifactStateHistories.CountAsync(),
+                
+                // User stories y construcción
                 userStories = await _context.UserStories.CountAsync(),
-                alcanceIteracion = await _context.IterationScopes.CountAsync(),
+                microincrements = await _context.Microincrements.CountAsync(),
+                finalBuilds = await _context.FinalBuilds.CountAsync(),
+                
+                // Testing y defectos
                 ejecucionesPrueba = await _context.TestExecutions.CountAsync(),
                 defectos = await _context.Defects.CountAsync(),
-                notificaciones = await _context.Notifications.CountAsync()
+                
+                // Notificaciones y auditoría
+                notificaciones = await _context.Notifications.CountAsync(),
+                notificationPreferences = await _context.NotificationPreferences.CountAsync(),
+                auditLogs = await _context.AuditLogs.CountAsync()
             };
 
             var isEmpty = counts.roles == 0 && counts.usuarios == 0 && counts.proyectos == 0;

@@ -18,7 +18,9 @@ public class WorkflowRepository : IWorkflowRepository
     {
         return await _context.Workflows
             .Include(w => w.Project)
-            .Include(w => w.States)
+            .Include(w => w.States.OrderBy(s => s.Order))
+                .ThenInclude(s => s.Responsibles)
+                    .ThenInclude(r => r.User)
             .OrderBy(w => w.Name)
             .ToListAsync();
     }
@@ -26,7 +28,9 @@ public class WorkflowRepository : IWorkflowRepository
     public async Task<IEnumerable<Workflow>> GetByProjectIdAsync(Guid projectId)
     {
         return await _context.Workflows
-            .Include(w => w.States)
+            .Include(w => w.States.OrderBy(s => s.Order))
+                .ThenInclude(s => s.Responsibles)
+                    .ThenInclude(r => r.User)
             .Where(w => w.ProjectId == projectId)
             .OrderBy(w => w.Name)
             .ToListAsync();

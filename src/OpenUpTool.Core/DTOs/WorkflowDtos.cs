@@ -85,7 +85,8 @@ public class WorkflowStateResponsibleDto
 public class CreateWorkflowStateResponsibleDto
 {
     public Guid WorkflowStateId { get; set; }
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
+    public string? UserEmail { get; set; }
     public string? Role { get; set; }
 }
 

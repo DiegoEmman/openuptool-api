@@ -346,6 +346,7 @@ public class CustomFieldDefinitionService : ICustomFieldDefinitionService
         var field = new CustomFieldDefinition
         {
             Id = Guid.NewGuid(),
+            ConfigurationId = artifactType.ConfigurationId,
             ArtifactTypeTemplateId = dto.ArtifactTypeTemplateId,
             FieldName = dto.FieldName,
             DisplayName = dto.DisplayName,

@@ -161,7 +161,8 @@ public class ArtifactsController : ControllerBase
                 request.FileCategory,
                 request.RepositoryUrl,
                 request.RepositoryVersion,
-                request.BuildNumber
+                request.BuildNumber,
+                request.WorkflowId
             );
 
             var artifact = await _artifactService.CreateArtifactAsync(dto, fileStream, fileName);

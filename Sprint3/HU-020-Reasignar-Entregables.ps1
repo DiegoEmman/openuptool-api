@@ -219,8 +219,16 @@ if ($null -ne $artifactId) {
             Write-Host "    ADVERTENCIA: Movimiento debio ser rechazado`n" -ForegroundColor Yellow
         }
     } catch {
-        $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
-        Write-Host "    Rechazado: $($errorBody.message)" -ForegroundColor White
+        if ($_.ErrorDetails.Message) {
+            try {
+                $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
+                Write-Host "    Rechazado: $($errorBody.message)" -ForegroundColor White
+            } catch {
+                Write-Host "    Rechazado: $($_.ErrorDetails.Message)" -ForegroundColor White
+            }
+        } else {
+            Write-Host "    Rechazado: Error al procesar la solicitud" -ForegroundColor White
+        }
         Write-Host "    OK: Sistema rechazo correctamente`n" -ForegroundColor Green
     }
 }

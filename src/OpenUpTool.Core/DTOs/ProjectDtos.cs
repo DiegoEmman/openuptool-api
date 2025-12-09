@@ -31,7 +31,10 @@ public record ProjectDto(
     Guid? PlanId,
     List<string> Phases,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    bool IsArchived,
+    DateTime? ArchivedAt,
+    Guid? ArchivedBy
 );
 
 public class ProjectMemberDto

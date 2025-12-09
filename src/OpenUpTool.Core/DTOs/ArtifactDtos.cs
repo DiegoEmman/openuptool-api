@@ -47,7 +47,8 @@ public record CreateArtifactDto(
     string? FileCategory, // DIAGRAM, PROTOTYPE, DOCUMENT
     string? RepositoryUrl,
     string? RepositoryVersion,
-    string? BuildNumber
+    string? BuildNumber,
+    Guid? WorkflowId
 );
 
 public record UpdateArtifactDto(

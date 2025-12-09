@@ -30,7 +30,7 @@ try {
     $loginBody = '{"email":"admin@openuptool.com","password":"Password123!"}'
     $response = Invoke-RestMethod -Uri "$baseUrl/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json"
     $headers = @{ Authorization = "Bearer $($response.token)" }
-    Write-Host "    OK: Token obtenido`n" -ForegroundColor Green
+    Write-Host "    OK: Token obtenido`n" -ForegroundColor Green 
 } catch {
     Write-Host "    ERROR: $($_.Exception.Message)`n" -ForegroundColor Red
     exit
