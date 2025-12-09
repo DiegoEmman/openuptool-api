@@ -9,13 +9,19 @@ public class ProjectClosureService : IProjectClosureService
 {
     private readonly IProjectClosureRepository _closureRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IArtifactRepository _artifactRepository;
+    private readonly IArtifactTypeRepository _artifactTypeRepository;
 
     public ProjectClosureService(
         IProjectClosureRepository closureRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IArtifactRepository artifactRepository,
+        IArtifactTypeRepository artifactTypeRepository)
     {
         _closureRepository = closureRepository;
         _projectRepository = projectRepository;
+        _artifactRepository = artifactRepository;
+        _artifactTypeRepository = artifactTypeRepository;
     }
 
     public async Task<IEnumerable<ProjectClosureDto>> GetAllClosuresAsync()
@@ -152,25 +158,96 @@ public class ProjectClosureService : IProjectClosureService
         if (project == null)
             throw new ArgumentException($"Proyecto con ID {projectId} no encontrado");
 
-        var missingCriteria = new List<string>();
-        
-        // Validar que todas las fases obligatorias estén completadas
+        var checklist = new List<ClosureCriteriaDto>();
+
+        // 1) Add phase completion items
         var phases = project.Phases?.ToList() ?? new List<Phase>();
-        var incompletedPhases = phases.Where(p => p.Status != "Completada").ToList();
-        foreach (var phase in incompletedPhases)
+        foreach (var phase in phases)
         {
-            missingCriteria.Add($"Fase no completada: {phase.Name}");
+            checklist.Add(new ClosureCriteriaDto
+            {
+                CriteriaId = $"phase-{phase.PhaseCode}",
+                Name = $"Fase: {phase.Name}",
+                IsMandatory = true,
+                IsCompleted = string.Equals(phase.Status, "Completada", StringComparison.OrdinalIgnoreCase),
+                Notes = $"Estado: {phase.Status}"
+            });
         }
 
-        var totalMandatory = phases.Count;
-        var completed = phases.Count - incompletedPhases.Count;
+        // 2) Add artifact-type based items for mandatory ArtifactTypes
+        try
+        {
+            var artifactTypes = (await _artifactTypeRepository.GetAllAsync()).ToList();
+            foreach (var at in artifactTypes.Where(a => a.IsMandatory))
+            {
+                var artifacts = (await _artifactRepository.GetByProjectAndPhaseAsync(projectId, at.Phase)).ToList();
+                var matching = artifacts.Where(a => a.ArtifactTypeId == at.Id).ToList();
+
+                var criteria = new ClosureCriteriaDto
+                {
+                    CriteriaId = at.Id.ToString(),
+                    Name = at.Name,
+                    IsMandatory = true,
+                    IsCompleted = false,
+                    Notes = string.Empty
+                };
+
+                if (!matching.Any())
+                {
+                    criteria.IsCompleted = false;
+                    criteria.Notes = $"No se encontró ningún artefacto del tipo {at.Name} en la fase {at.Phase}";
+                }
+                else
+                {
+                    // Check versions
+                    var deliveredInfos = new List<string>();
+                    foreach (var art in matching)
+                    {
+                        if (art.Versions != null && art.Versions.Any())
+                        {
+                            var latest = art.Versions.OrderByDescending(v => v.VersionNumber).First();
+                            deliveredInfos.Add($"artifact:{art.Id} version:{latest.Id} file:{latest.FileName}");
+                        }
+                    }
+
+                    if (deliveredInfos.Any())
+                    {
+                        criteria.IsCompleted = true;
+                        criteria.Notes = string.Join("; ", deliveredInfos);
+                    }
+                    else
+                    {
+                        criteria.IsCompleted = false;
+                        criteria.Notes = $"Se encontraron artefactos del tipo {at.Name} pero sin versiones entregadas";
+                    }
+                }
+
+                checklist.Add(criteria);
+            }
+        }
+        catch (Exception ex)
+        {
+            checklist.Add(new ClosureCriteriaDto
+            {
+                CriteriaId = "artifact-validation-error",
+                Name = "Validación de artefactos",
+                IsMandatory = true,
+                IsCompleted = false,
+                Notes = $"Error al validar artefactos: {ex.Message}"
+            });
+        }
+
+        var missing = checklist.Where(c => c.IsMandatory && !c.IsCompleted).Select(c => c.Name).ToList();
+        var totalMandatory = checklist.Count(c => c.IsMandatory);
+        var completedMandatory = checklist.Count(c => c.IsMandatory && c.IsCompleted);
 
         return new ClosureValidationDto
         {
-            CanClose = missingCriteria.Count == 0,
-            MissingMandatoryCriteria = missingCriteria,
+            CanClose = !missing.Any(),
+            MissingMandatoryCriteria = missing,
             TotalMandatory = totalMandatory,
-            CompletedMandatory = completed
+            CompletedMandatory = completedMandatory,
+            ChecklistPreview = checklist
         };
     }
 

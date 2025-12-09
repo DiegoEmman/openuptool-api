@@ -189,3 +189,83 @@ public record MissingArtifactDto(
     bool HasVersions
 );
 
+// ========== HU-020: DTOs para Reasignacion de Entregables ==========
+
+/// <summary>
+/// DTO para solicitar la reasignacion de un entregable a otra fase
+/// </summary>
+public record ReassignArtifactDto(
+    string NewPhaseId,
+    string? Reason,
+    bool ConfirmViolation = false  // Si es true, confirma la reasignacion aunque viole reglas
+);
+
+/// <summary>
+/// DTO para solicitar la reasignacion de un entregable a otro workflow
+/// </summary>
+public record ReassignWorkflowDto(
+    Guid NewWorkflowId,
+    Guid? NewStateId,  // Estado inicial en el nuevo workflow (opcional, usa el inicial por defecto)
+    string? Reason
+);
+
+/// <summary>
+/// DTO para el historial de movimientos de un artefacto
+/// </summary>
+public record ArtifactMovementHistoryDto(
+    Guid Id,
+    Guid ArtifactId,
+    string MovementType,  // PHASE_CHANGE, WORKFLOW_CHANGE
+    string? FromPhaseId,
+    string? ToPhaseId,
+    Guid? FromWorkflowId,
+    Guid? ToWorkflowId,
+    Guid? FromStateId,
+    Guid? ToStateId,
+    string? Reason,
+    string MovedBy,
+    DateTime MovedAt,
+    bool ViolatedRules,
+    string? ViolationDetails
+);
+
+/// <summary>
+/// DTO para la respuesta de reasignacion con validaciones
+/// </summary>
+public record ReassignmentResultDto(
+    bool Success,
+    ArtifactDto? Artifact,
+    ArtifactMovementHistoryDto? Movement,
+    bool HasViolations,
+    List<ReassignmentViolationDto>? Violations,
+    string Message
+);
+
+/// <summary>
+/// DTO para una violacion de regla en la reasignacion
+/// </summary>
+public record ReassignmentViolationDto(
+    string ViolationType,  // MISSING_MANDATORY_ARTIFACTS, INVALID_PHASE_TRANSITION, WORKFLOW_INCOMPATIBLE
+    string Description,
+    string Severity  // WARNING, ERROR
+);
+
+/// <summary>
+/// DTO para validar si un movimiento es posible sin ejecutarlo
+/// </summary>
+public record ValidateReassignmentDto(
+    string? NewPhaseId,
+    Guid? NewWorkflowId
+);
+
+/// <summary>
+/// DTO con el resumen de historial de movimientos de un artefacto
+/// </summary>
+public record ArtifactMovementSummaryDto(
+    Guid ArtifactId,
+    string ArtifactTitle,
+    string CurrentPhaseId,
+    Guid? CurrentWorkflowId,
+    int TotalMovements,
+    List<ArtifactMovementHistoryDto> Movements
+);

@@ -30,6 +30,7 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<IterationScope> IterationScopes => Set<IterationScope>();
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>(); // HU-021
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Microincrement> Microincrements => Set<Microincrement>();
     public DbSet<ProjectClosure> ProjectClosures => Set<ProjectClosure>();
@@ -39,6 +40,19 @@ public class OpenUpToolDbContext : DbContext
     public DbSet<WorkflowStateResponsible> WorkflowStateResponsibles => Set<WorkflowStateResponsible>();
     public DbSet<ArtifactStateHistory> ArtifactStateHistories => Set<ArtifactStateHistory>();
     public DbSet<WorkflowPermission> WorkflowPermissions => Set<WorkflowPermission>();
+    public DbSet<ArtifactMovementHistory> ArtifactMovementHistories => Set<ArtifactMovementHistory>(); // HU-020
+    
+    // HU-018: Global Configuration entities
+    public DbSet<GlobalConfiguration> GlobalConfigurations => Set<GlobalConfiguration>();
+    public DbSet<RoleTemplate> RoleTemplates => Set<RoleTemplate>();
+    public DbSet<PhaseTemplate> PhaseTemplates => Set<PhaseTemplate>();
+    public DbSet<ArtifactTypeTemplate> ArtifactTypeTemplates => Set<ArtifactTypeTemplate>();
+    public DbSet<WorkflowTemplate> WorkflowTemplates => Set<WorkflowTemplate>();
+    public DbSet<WorkflowStateTemplate> WorkflowStateTemplates => Set<WorkflowStateTemplate>();
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+    public DbSet<ConfigurationChangeHistory> ConfigurationChangeHistories => Set<ConfigurationChangeHistory>();
+    public DbSet<ProjectConfiguration> ProjectConfigurations => Set<ProjectConfiguration>();
+    public DbSet<ArtifactCustomFieldValue> ArtifactCustomFieldValues => Set<ArtifactCustomFieldValue>();
 
     public override int SaveChanges()
     {
@@ -703,6 +717,28 @@ public class OpenUpToolDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // HU-021: NotificationPreferences
+        modelBuilder.Entity<NotificationPreference>(entity =>
+        {
+            entity.ToTable("notification_preferences");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.NotificationType).HasColumnName("notification_type").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InAppEnabled).HasColumnName("in_app_enabled").HasDefaultValue(true);
+            entity.Property(e => e.EmailEnabled).HasColumnName("email_enabled").HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.UserId, e.NotificationType }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+        });
+
         // ProjectClosure
         modelBuilder.Entity<ProjectClosure>(entity =>
         {
@@ -935,6 +971,295 @@ public class OpenUpToolDbContext : DbContext
             entity.HasIndex(e => e.IterationId);
             entity.HasIndex(e => e.ArtifactId);
             entity.HasIndex(e => e.Type);
+        });
+
+        // ========== HU-018: Global Configuration Entities ==========
+
+        // GlobalConfiguration
+        modelBuilder.Entity<GlobalConfiguration>(entity =>
+        {
+            entity.ToTable("global_configurations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
+            entity.Property(e => e.Version).HasColumnName("version").HasDefaultValue(1);
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+            entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.Name);
+            entity.HasIndex(e => e.IsDefault);
+        });
+
+        // RoleTemplate
+        modelBuilder.Entity<RoleTemplate>(entity =>
+        {
+            entity.ToTable("role_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.Permissions).HasColumnName("permissions").HasColumnType("jsonb");
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.IsSystem).HasColumnName("is_system").HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(c => c.RoleTemplates)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ConfigurationId);
+        });
+
+        // PhaseTemplate
+        modelBuilder.Entity<PhaseTemplate>(entity =>
+        {
+            entity.ToTable("phase_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.PhaseCode).HasColumnName("phase_code").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.DefaultDurationDays).HasColumnName("default_duration_days");
+            entity.Property(e => e.IsMandatory).HasColumnName("is_mandatory").HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(c => c.PhaseTemplates)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ConfigurationId);
+        });
+
+        // ArtifactTypeTemplate
+        modelBuilder.Entity<ArtifactTypeTemplate>(entity =>
+        {
+            entity.ToTable("artifact_type_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.PhaseCode).HasColumnName("phase_code").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Code).HasColumnName("code").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
+            entity.Property(e => e.IsMandatory).HasColumnName("is_mandatory").HasDefaultValue(false);
+            entity.Property(e => e.DefaultFormat).HasColumnName("default_format").HasMaxLength(20).HasDefaultValue("TEXT");
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(c => c.ArtifactTypeTemplates)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ConfigurationId);
+            entity.HasIndex(e => e.PhaseCode);
+        });
+
+        // WorkflowTemplate
+        modelBuilder.Entity<WorkflowTemplate>(entity =>
+        {
+            entity.ToTable("workflow_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
+            entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(c => c.WorkflowTemplates)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ConfigurationId);
+        });
+
+        // WorkflowStateTemplate
+        modelBuilder.Entity<WorkflowStateTemplate>(entity =>
+        {
+            entity.ToTable("workflow_state_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.WorkflowTemplateId).HasColumnName("workflow_template_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.Color).HasColumnName("color").HasMaxLength(20);
+            entity.Property(e => e.IsInitialState).HasColumnName("is_initial_state").HasDefaultValue(false);
+            entity.Property(e => e.IsFinalState).HasColumnName("is_final_state").HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.WorkflowTemplate)
+                .WithMany(w => w.States)
+                .HasForeignKey(e => e.WorkflowTemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.WorkflowTemplateId);
+        });
+
+        // CustomFieldDefinition
+        modelBuilder.Entity<CustomFieldDefinition>(entity =>
+        {
+            entity.ToTable("custom_field_definitions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ArtifactTypeTemplateId).HasColumnName("artifact_type_template_id");
+            entity.Property(e => e.FieldName).HasColumnName("field_name").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DisplayName).HasColumnName("display_name").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.FieldType).HasColumnName("field_type").IsRequired().HasMaxLength(20);
+            entity.Property(e => e.IsRequired).HasColumnName("is_required").HasDefaultValue(false);
+            entity.Property(e => e.DefaultValue).HasColumnName("default_value").HasMaxLength(1000);
+            entity.Property(e => e.Options).HasColumnName("options").HasColumnType("jsonb");
+            entity.Property(e => e.ValidationRules).HasColumnName("validation_rules").HasColumnType("jsonb");
+            entity.Property(e => e.OrderIndex).HasColumnName("order_index");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.ArtifactTypeTemplate)
+                .WithMany(a => a.CustomFields)
+                .HasForeignKey(e => e.ArtifactTypeTemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ArtifactTypeTemplateId);
+        });
+
+        // ConfigurationChangeHistory
+        modelBuilder.Entity<ConfigurationChangeHistory>(entity =>
+        {
+            entity.ToTable("configuration_change_history");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.FromVersion).HasColumnName("from_version");
+            entity.Property(e => e.ToVersion).HasColumnName("to_version");
+            entity.Property(e => e.ChangeType).HasColumnName("change_type").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityType).HasColumnName("entity_type").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityId).HasColumnName("entity_id");
+            entity.Property(e => e.EntityName).HasColumnName("entity_name").HasMaxLength(255);
+            entity.Property(e => e.OldValue).HasColumnName("old_value").HasColumnType("jsonb");
+            entity.Property(e => e.NewValue).HasColumnName("new_value").HasColumnType("jsonb");
+            entity.Property(e => e.ChangedBy).HasColumnName("changed_by").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ChangeDescription).HasColumnName("change_description").HasMaxLength(1000);
+            entity.Property(e => e.ChangedAt).HasColumnName("changed_at");
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(c => c.ChangeHistory)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ConfigurationId);
+            entity.HasIndex(e => e.ChangedAt);
+        });
+
+        // ProjectConfiguration
+        modelBuilder.Entity<ProjectConfiguration>(entity =>
+        {
+            entity.ToTable("project_configurations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ConfigurationId).HasColumnName("configuration_id");
+            entity.Property(e => e.AppliedVersion).HasColumnName("applied_version");
+            entity.Property(e => e.AppliedAt).HasColumnName("applied_at");
+            entity.Property(e => e.AppliedBy).HasColumnName("applied_by").HasMaxLength(255);
+            entity.Property(e => e.AutoUpdate).HasColumnName("auto_update").HasDefaultValue(false);
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany()
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.ProjectId).IsUnique();
+            entity.HasIndex(e => e.ConfigurationId);
+        });
+
+        // ArtifactCustomFieldValue
+        modelBuilder.Entity<ArtifactCustomFieldValue>(entity =>
+        {
+            entity.ToTable("artifact_custom_field_values");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.CustomFieldDefinitionId).HasColumnName("custom_field_definition_id");
+            entity.Property(e => e.Value).HasColumnName("value").HasMaxLength(5000);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.Artifact)
+                .WithMany()
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CustomFieldDefinition)
+                .WithMany()
+                .HasForeignKey(e => e.CustomFieldDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ArtifactId);
+            entity.HasIndex(e => new { e.ArtifactId, e.CustomFieldDefinitionId }).IsUnique();
+        });
+
+        // HU-020: ArtifactMovementHistory - Track artifact movements between phases/workflows
+        modelBuilder.Entity<ArtifactMovementHistory>(entity =>
+        {
+            entity.ToTable("artifact_movement_histories");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ArtifactId).HasColumnName("artifact_id");
+            entity.Property(e => e.MovementType).HasColumnName("movement_type").IsRequired().HasMaxLength(20);
+            entity.Property(e => e.FromPhaseId).HasColumnName("from_phase_id").HasMaxLength(50);
+            entity.Property(e => e.ToPhaseId).HasColumnName("to_phase_id").HasMaxLength(50);
+            entity.Property(e => e.FromWorkflowId).HasColumnName("from_workflow_id");
+            entity.Property(e => e.ToWorkflowId).HasColumnName("to_workflow_id");
+            entity.Property(e => e.FromStateId).HasColumnName("from_state_id");
+            entity.Property(e => e.ToStateId).HasColumnName("to_state_id");
+            entity.Property(e => e.Reason).HasColumnName("reason").HasMaxLength(2000);
+            entity.Property(e => e.MovedBy).HasColumnName("moved_by").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.MovedAt).HasColumnName("moved_at").HasColumnType("timestamp");
+            entity.Property(e => e.ViolatedRules).HasColumnName("violated_rules").HasDefaultValue(false);
+            entity.Property(e => e.ViolationDetails).HasColumnName("violation_details").HasMaxLength(4000);
+
+            entity.HasOne(e => e.Artifact)
+                .WithMany(a => a.MovementHistories)
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // FromPhaseId y ToPhaseId son códigos de fase (string), no FKs
+
+            entity.HasOne(e => e.FromWorkflow)
+                .WithMany()
+                .HasForeignKey(e => e.FromWorkflowId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ToWorkflow)
+                .WithMany()
+                .HasForeignKey(e => e.ToWorkflowId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.ArtifactId);
+            entity.HasIndex(e => e.MovedAt);
+            entity.HasIndex(e => e.MovementType);
         });
     }
 }

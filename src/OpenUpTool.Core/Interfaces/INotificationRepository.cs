@@ -14,3 +14,16 @@ public interface INotificationRepository
     Task MarkAllAsReadAsync(Guid userId);
     Task<Guid?> GetUserIdByEmailAsync(string email);
 }
+
+// HU-021: Repositorio de preferencias de notificación
+public interface INotificationPreferenceRepository
+{
+    Task<IEnumerable<NotificationPreference>> GetByUserIdAsync(Guid userId);
+    Task<NotificationPreference?> GetByUserAndTypeAsync(Guid userId, string notificationType);
+    Task<NotificationPreference?> GetByIdAsync(Guid id);
+    Task<NotificationPreference> CreateAsync(NotificationPreference preference);
+    Task<NotificationPreference> UpdateAsync(NotificationPreference preference);
+    Task DeleteAsync(Guid id);
+    Task<bool> IsNotificationEnabledAsync(Guid userId, string notificationType, bool checkEmail = false);
+    Task InitializeDefaultPreferencesAsync(Guid userId);
+}

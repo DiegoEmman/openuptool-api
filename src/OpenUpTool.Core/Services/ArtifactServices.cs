@@ -10,15 +10,21 @@ public class ArtifactService : IArtifactService
     private readonly IArtifactRepository _artifactRepository;
     private readonly IArtifactTypeRepository _artifactTypeRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IArtifactMovementHistoryRepository _movementHistoryRepository;
+
+    // Orden válido de fases OpenUP
+    private static readonly string[] ValidPhaseOrder = { "INCEPTION", "ELABORATION", "CONSTRUCTION", "TRANSITION" };
 
     public ArtifactService(
         IArtifactRepository artifactRepository, 
         IArtifactTypeRepository artifactTypeRepository,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        IArtifactMovementHistoryRepository movementHistoryRepository)
     {
         _artifactRepository = artifactRepository;
         _artifactTypeRepository = artifactTypeRepository;
         _fileStorageService = fileStorageService;
+        _movementHistoryRepository = movementHistoryRepository;
     }
 
     public async Task<IEnumerable<ArtifactDto>> GetArtifactsByProjectAndPhaseAsync(Guid projectId, string phaseId)
@@ -381,6 +387,224 @@ public class ArtifactService : IArtifactService
     private class IterationDataJson
     {
         public List<IterationActivityDto>? Activities { get; set; }
+    }
+
+    // HU-020: Métodos de reasignación de artefactos
+
+    public async Task<ReassignmentResultDto> ReassignToPhaseAsync(Guid artifactId, string userId, ReassignArtifactDto dto)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null)
+        {
+            return new ReassignmentResultDto(
+                Success: false, 
+                Artifact: null,
+                Movement: null, 
+                HasViolations: false,
+                Violations: new List<ReassignmentViolationDto>(),
+                Message: "Artefacto no encontrado"
+            );
+        }
+
+        var oldPhaseId = artifact.PhaseId;
+        var violations = ValidatePhaseChange(oldPhaseId, dto.NewPhaseId);
+
+        // Si hay violaciones y no se confirmó
+        if (violations.Any() && !dto.ConfirmViolation)
+        {
+            return new ReassignmentResultDto(
+                Success: false, 
+                Artifact: MapToDto(artifact),
+                Movement: null, 
+                HasViolations: true,
+                Violations: violations,
+                Message: "El movimiento viola reglas de OpenUP. Se requiere confirmación."
+            );
+        }
+
+        // Registrar movimiento
+        var movement = new ArtifactMovementHistory
+        {
+            Id = Guid.NewGuid(),
+            ArtifactId = artifactId,
+            MovementType = "PHASE_CHANGE",
+            FromPhaseId = oldPhaseId,
+            ToPhaseId = dto.NewPhaseId,
+            Reason = dto.Reason,
+            MovedBy = userId,
+            MovedAt = DateTime.UtcNow,
+            ViolatedRules = violations.Any(),
+            ViolationDetails = violations.Any() ? JsonSerializer.Serialize(violations) : null
+        };
+
+        await _movementHistoryRepository.CreateAsync(movement);
+
+        // Actualizar artefacto
+        artifact.PhaseId = dto.NewPhaseId;
+        var updatedArtifact = await _artifactRepository.UpdateAsync(artifact);
+
+        return new ReassignmentResultDto(
+            Success: true,
+            Artifact: MapToDto(updatedArtifact),
+            Movement: MapToMovementDto(movement),
+            HasViolations: violations.Any(),
+            Violations: violations,
+            Message: $"Artefacto movido de {oldPhaseId} a {dto.NewPhaseId}" + 
+                (violations.Any() ? " (con violaciones confirmadas)" : "")
+        );
+    }
+
+    public async Task<ReassignmentResultDto> ReassignWorkflowAsync(Guid artifactId, string userId, ReassignWorkflowDto dto)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null)
+        {
+            return new ReassignmentResultDto(
+                Success: false, 
+                Artifact: null,
+                Movement: null, 
+                HasViolations: false,
+                Violations: new List<ReassignmentViolationDto>(),
+                Message: "Artefacto no encontrado"
+            );
+        }
+
+        var oldWorkflowId = artifact.WorkflowId;
+        var oldStateId = artifact.CurrentStateId;
+
+        // Registrar movimiento
+        var movement = new ArtifactMovementHistory
+        {
+            Id = Guid.NewGuid(),
+            ArtifactId = artifactId,
+            MovementType = "WORKFLOW_CHANGE",
+            FromWorkflowId = oldWorkflowId,
+            ToWorkflowId = dto.NewWorkflowId,
+            FromStateId = oldStateId,
+            ToStateId = dto.NewStateId,
+            Reason = dto.Reason,
+            MovedBy = userId,
+            MovedAt = DateTime.UtcNow,
+            ViolatedRules = false,
+            ViolationDetails = null
+        };
+
+        await _movementHistoryRepository.CreateAsync(movement);
+
+        // Actualizar artefacto
+        artifact.WorkflowId = dto.NewWorkflowId;
+        artifact.CurrentStateId = dto.NewStateId;
+        var updatedArtifact = await _artifactRepository.UpdateAsync(artifact);
+
+        return new ReassignmentResultDto(
+            Success: true,
+            Artifact: MapToDto(updatedArtifact),
+            Movement: MapToMovementDto(movement),
+            HasViolations: false,
+            Violations: new List<ReassignmentViolationDto>(),
+            Message: "Workflow del artefacto actualizado"
+        );
+    }
+
+    public async Task<ReassignmentResultDto> ValidateReassignmentAsync(Guid artifactId, ValidateReassignmentDto dto)
+    {
+        var artifact = await _artifactRepository.GetByIdAsync(artifactId);
+        if (artifact == null)
+        {
+            return new ReassignmentResultDto(
+                Success: false, 
+                Artifact: null,
+                Movement: null, 
+                HasViolations: false,
+                Violations: new List<ReassignmentViolationDto>(),
+                Message: "Artefacto no encontrado"
+            );
+        }
+
+        var violations = new List<ReassignmentViolationDto>();
+
+        if (!string.IsNullOrEmpty(dto.NewPhaseId))
+        {
+            violations = ValidatePhaseChange(artifact.PhaseId, dto.NewPhaseId);
+        }
+
+        return new ReassignmentResultDto(
+            Success: !violations.Any(),
+            Artifact: MapToDto(artifact),
+            Movement: null,
+            HasViolations: violations.Any(),
+            Violations: violations,
+            Message: violations.Any() 
+                ? "El movimiento tiene violaciones de reglas" 
+                : "El movimiento es válido"
+        );
+    }
+
+    public async Task<IEnumerable<ArtifactMovementHistoryDto>> GetMovementHistoryAsync(Guid artifactId)
+    {
+        var movements = await _movementHistoryRepository.GetByArtifactIdAsync(artifactId);
+        return movements.Select(MapToMovementDto);
+    }
+
+    private List<ReassignmentViolationDto> ValidatePhaseChange(string fromPhase, string toPhase)
+    {
+        var violations = new List<ReassignmentViolationDto>();
+
+        var fromIndex = Array.IndexOf(ValidPhaseOrder, fromPhase.ToUpperInvariant());
+        var toIndex = Array.IndexOf(ValidPhaseOrder, toPhase.ToUpperInvariant());
+
+        // Fase no válida
+        if (fromIndex == -1 || toIndex == -1)
+        {
+            violations.Add(new ReassignmentViolationDto(
+                "INVALID_PHASE",
+                "Una de las fases especificadas no es válida para OpenUP",
+                "error"
+            ));
+            return violations;
+        }
+
+        // Movimiento hacia atrás (retroceso de fase)
+        if (toIndex < fromIndex)
+        {
+            violations.Add(new ReassignmentViolationDto(
+                "BACKWARD_PHASE_MOVE",
+                $"Mover un artefacto de {fromPhase} a {toPhase} implica un retroceso en el ciclo de vida OpenUP",
+                "warning"
+            ));
+        }
+
+        // Saltar fases (movimiento no secuencial)
+        if (Math.Abs(toIndex - fromIndex) > 1)
+        {
+            violations.Add(new ReassignmentViolationDto(
+                "SKIP_PHASE",
+                $"Se están saltando fases intermedias en el movimiento de {fromPhase} a {toPhase}",
+                "info"
+            ));
+        }
+
+        return violations;
+    }
+
+    private static ArtifactMovementHistoryDto MapToMovementDto(ArtifactMovementHistory movement)
+    {
+        return new ArtifactMovementHistoryDto(
+            movement.Id,
+            movement.ArtifactId,
+            movement.MovementType,
+            movement.FromPhaseId,
+            movement.ToPhaseId,
+            movement.FromWorkflowId,
+            movement.ToWorkflowId,
+            movement.FromStateId,
+            movement.ToStateId,
+            movement.Reason,
+            movement.MovedBy,
+            movement.MovedAt,
+            movement.ViolatedRules,
+            movement.ViolationDetails
+        );
     }
 }
 

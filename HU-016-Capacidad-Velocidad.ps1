@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Continue"
+    $ErrorActionPreference = "Continue"
 $baseUrl = "http://localhost:5000"
 
 Write-Host "`n=== TEST HU-016: CONTROL DE CAPACIDAD Y VELOCIDAD ===" -ForegroundColor Cyan

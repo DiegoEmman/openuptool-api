@@ -69,6 +69,13 @@ public class ClosureValidationDto
     public List<string> MissingMandatoryCriteria { get; set; } = new();
     public int TotalMandatory { get; set; }
     public int CompletedMandatory { get; set; }
+    public List<ClosureCriteriaDto> ChecklistPreview { get; set; } = new();
+}
+
+public class CloseProjectDto
+{
+    public bool Force { get; set; } = false;
+    public string? Justification { get; set; }
 }
 
 // ============= FINAL BUILD DTOs =============

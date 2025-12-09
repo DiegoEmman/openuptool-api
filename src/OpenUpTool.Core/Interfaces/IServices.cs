@@ -79,6 +79,12 @@ public interface IArtifactService
     Task<ArtifactDto?> AddTestResultAsync(Guid artifactId, AddTestResultRequest request);
     Task<ArtifactDto?> AddIterationActivityAsync(Guid artifactId, AddIterationActivityRequest request);
     Task<PhaseValidationDto> ValidatePhaseCompletionAsync(Guid projectId, string phaseId);
+    
+    // HU-020: Reasignación de artefactos
+    Task<ReassignmentResultDto> ReassignToPhaseAsync(Guid artifactId, string userId, ReassignArtifactDto dto);
+    Task<ReassignmentResultDto> ReassignWorkflowAsync(Guid artifactId, string userId, ReassignWorkflowDto dto);
+    Task<ReassignmentResultDto> ValidateReassignmentAsync(Guid artifactId, ValidateReassignmentDto dto);
+    Task<IEnumerable<ArtifactMovementHistoryDto>> GetMovementHistoryAsync(Guid artifactId);
 }
 
 public interface IArtifactTypeService
@@ -218,4 +224,101 @@ public interface IWorkflowPermissionService
     Task<WorkflowPermissionDto?> UpdatePermissionAsync(Guid id, UpdateWorkflowPermissionDto dto);
     Task<bool> DeletePermissionAsync(Guid id);
     Task<bool> CheckPermissionAsync(Guid workflowId, string role, string action);
+}
+
+// ========== HU-018: Global Configuration Services ==========
+
+public interface IGlobalConfigurationService
+{
+    // Configuration CRUD
+    Task<IEnumerable<GlobalConfigurationDto>> GetAllConfigurationsAsync();
+    Task<GlobalConfigurationDto?> GetConfigurationByIdAsync(Guid id);
+    Task<GlobalConfigurationDetailDto?> GetConfigurationDetailsAsync(Guid id);
+    Task<GlobalConfigurationDetailDto?> GetDefaultConfigurationAsync();
+    Task<GlobalConfigurationDto> CreateConfigurationAsync(CreateGlobalConfigurationDto dto, string createdBy);
+    Task<GlobalConfigurationDto?> UpdateConfigurationAsync(Guid id, UpdateGlobalConfigurationDto dto);
+    Task<bool> DeleteConfigurationAsync(Guid id);
+    
+    // Version management
+    Task<GlobalConfigurationDto?> IncrementVersionAsync(Guid id, string changedBy, string changeDescription);
+    Task<GlobalConfigurationDetailDto?> RollbackToVersionAsync(Guid id, int targetVersion, string changedBy, string? reason);
+    
+    // Change history
+    Task<IEnumerable<ConfigurationChangeHistoryDto>> GetChangeHistoryAsync(Guid configurationId);
+    Task<IEnumerable<ConfigurationChangeHistoryDto>> GetChangesByVersionAsync(Guid configurationId, int version);
+}
+
+public interface IRoleTemplateService
+{
+    Task<IEnumerable<RoleTemplateDto>> GetRolesByConfigurationAsync(Guid configurationId);
+    Task<RoleTemplateDto?> GetRoleByIdAsync(Guid id);
+    Task<RoleTemplateDto> CreateRoleAsync(CreateRoleTemplateDto dto, string changedBy);
+    Task<RoleTemplateDto?> UpdateRoleAsync(Guid id, UpdateRoleTemplateDto dto, string changedBy);
+    Task<bool> DeleteRoleAsync(Guid id, string changedBy);
+}
+
+public interface IPhaseTemplateService
+{
+    Task<IEnumerable<PhaseTemplateDto>> GetPhasesByConfigurationAsync(Guid configurationId);
+    Task<PhaseTemplateDto?> GetPhaseByIdAsync(Guid id);
+    Task<PhaseTemplateDto> CreatePhaseAsync(CreatePhaseTemplateDto dto, string changedBy);
+    Task<PhaseTemplateDto?> UpdatePhaseAsync(Guid id, UpdatePhaseTemplateDto dto, string changedBy);
+    Task<bool> DeletePhaseAsync(Guid id, string changedBy);
+}
+
+public interface IArtifactTypeTemplateService
+{
+    Task<IEnumerable<ArtifactTypeTemplateDto>> GetArtifactTypesByConfigurationAsync(Guid configurationId);
+    Task<IEnumerable<ArtifactTypeTemplateDto>> GetArtifactTypesByPhaseAsync(Guid configurationId, string phaseCode);
+    Task<ArtifactTypeTemplateDto?> GetArtifactTypeByIdAsync(Guid id);
+    Task<ArtifactTypeTemplateDto> CreateArtifactTypeAsync(CreateArtifactTypeTemplateDto dto, string changedBy);
+    Task<ArtifactTypeTemplateDto?> UpdateArtifactTypeAsync(Guid id, UpdateArtifactTypeTemplateDto dto, string changedBy);
+    Task<bool> DeleteArtifactTypeAsync(Guid id, string changedBy);
+}
+
+public interface IWorkflowTemplateService
+{
+    Task<IEnumerable<WorkflowTemplateDto>> GetWorkflowsByConfigurationAsync(Guid configurationId);
+    Task<WorkflowTemplateDto?> GetWorkflowByIdAsync(Guid id);
+    Task<WorkflowTemplateDto> CreateWorkflowAsync(CreateWorkflowTemplateDto dto, string changedBy);
+    Task<WorkflowTemplateDto?> UpdateWorkflowAsync(Guid id, UpdateWorkflowTemplateDto dto, string changedBy);
+    Task<bool> DeleteWorkflowAsync(Guid id, string changedBy);
+}
+
+public interface IWorkflowStateTemplateService
+{
+    Task<IEnumerable<WorkflowStateTemplateDto>> GetStatesByWorkflowAsync(Guid workflowTemplateId);
+    Task<WorkflowStateTemplateDto?> GetStateByIdAsync(Guid id);
+    Task<WorkflowStateTemplateDto> CreateStateAsync(CreateWorkflowStateTemplateDto dto, string changedBy);
+    Task<WorkflowStateTemplateDto?> UpdateStateAsync(Guid id, UpdateWorkflowStateTemplateDto dto, string changedBy);
+    Task<bool> DeleteStateAsync(Guid id, string changedBy);
+}
+
+public interface ICustomFieldDefinitionService
+{
+    Task<IEnumerable<CustomFieldDefinitionDto>> GetFieldsByArtifactTypeAsync(Guid artifactTypeTemplateId);
+    Task<IEnumerable<CustomFieldDefinitionDto>> GetFieldsByConfigurationAsync(Guid configurationId);
+    Task<CustomFieldDefinitionDto?> GetFieldByIdAsync(Guid id);
+    Task<CustomFieldDefinitionDto> CreateFieldAsync(CreateCustomFieldDefinitionDto dto, string changedBy);
+    Task<CustomFieldDefinitionDto?> UpdateFieldAsync(Guid id, UpdateCustomFieldDefinitionDto dto, string changedBy);
+    Task<bool> DeleteFieldAsync(Guid id, string changedBy);
+}
+
+public interface IProjectConfigurationService
+{
+    Task<IEnumerable<ProjectConfigurationDto>> GetAllProjectConfigurationsAsync();
+    Task<IEnumerable<ProjectConfigurationDto>> GetProjectsByConfigurationAsync(Guid configurationId);
+    Task<ProjectConfigurationDto?> GetProjectConfigurationAsync(Guid projectId);
+    Task<ProjectConfigurationDto> ApplyConfigurationToProjectAsync(ApplyConfigurationToProjectDto dto, string appliedBy);
+    Task<ProjectConfigurationDto?> UpdateProjectConfigurationSettingsAsync(Guid projectId, UpdateProjectConfigurationSettingsDto dto);
+    Task<BulkUpdateResultDto> ApplyConfigurationUpdatesToProjectsAsync(Guid configurationId, ApplyConfigurationUpdatesDto dto, string appliedBy);
+}
+
+public interface IArtifactCustomFieldValueService
+{
+    Task<IEnumerable<ArtifactCustomFieldValueDto>> GetFieldValuesByArtifactAsync(Guid artifactId);
+    Task<ArtifactCustomFieldValueDto?> GetFieldValueByIdAsync(Guid id);
+    Task<ArtifactCustomFieldValueDto> SetFieldValueAsync(SetArtifactCustomFieldValueDto dto);
+    Task<IEnumerable<ArtifactCustomFieldValueDto>> BulkSetFieldValuesAsync(BulkSetCustomFieldValuesDto dto);
+    Task<bool> DeleteFieldValueAsync(Guid id);
 }

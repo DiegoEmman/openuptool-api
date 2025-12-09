@@ -2,16 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using OpenUpTool.Core.Entities;
 using OpenUpTool.Core.Interfaces;
 using OpenUpTool.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 
 namespace OpenUpTool.Infrastructure.Repositories;
 
 public class ProjectRepository : IProjectRepository
 {
     private readonly OpenUpToolDbContext _context;
+    private readonly ILogger<ProjectRepository> _logger;
 
-    public ProjectRepository(OpenUpToolDbContext context)
+    public ProjectRepository(OpenUpToolDbContext context, ILogger<ProjectRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<Project>> GetAllAsync()
@@ -24,18 +27,32 @@ public class ProjectRepository : IProjectRepository
 
     public async Task<IEnumerable<Project>> GetProjectsForUserAsync(Guid userId)
     {
-        // Obtener proyectos donde el usuario tiene un rol asignado
-        var projectIds = await _context.ProjectUserRoles
-            .Where(pur => pur.UserId == userId && pur.Status == "active")
-            .Select(pur => pur.ProjectId)
-            .Distinct()
-            .ToListAsync();
+        try
+        {
+            // Obtener proyectos donde el usuario tiene un rol asignado
+            var projectIds = await _context.ProjectUserRoles
+                .Where(pur => pur.UserId == userId && pur.Status == "active")
+                .Select(pur => pur.ProjectId)
+                .Distinct()
+                .ToListAsync();
 
-        return await _context.Projects
-            .Where(p => projectIds.Contains(p.Id) && !p.IsArchived)
-            .Include(p => p.Phases.OrderBy(ph => ph.OrderIndex))
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
+            if (!projectIds.Any())
+            {
+                _logger.LogWarning("No se encontraron proyectos para el usuario {UserId}", userId);
+                return Enumerable.Empty<Project>();
+            }
+
+            return await _context.Projects
+                .Where(p => projectIds.Contains(p.Id) && !p.IsArchived)
+                .Include(p => p.Phases.OrderBy(ph => ph.OrderIndex))
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener proyectos para el usuario {UserId}", userId);
+            throw;
+        }
     }
 
     public async Task<IEnumerable<Project>> GetArchivedProjectsForUserAsync(Guid userId)
@@ -691,6 +708,42 @@ public class FinalBuildRepository : IFinalBuildRepository
             _context.FinalBuilds.Remove(build);
             await _context.SaveChangesAsync();
         }
+    }
+}
+
+// HU-020: Repositorio para historial de movimientos de artefactos
+public class ArtifactMovementHistoryRepository : IArtifactMovementHistoryRepository
+{
+    private readonly OpenUpToolDbContext _context;
+
+    public ArtifactMovementHistoryRepository(OpenUpToolDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IEnumerable<ArtifactMovementHistory>> GetByArtifactIdAsync(Guid artifactId)
+    {
+        return await _context.ArtifactMovementHistories
+            .Include(m => m.FromWorkflow)
+            .Include(m => m.ToWorkflow)
+            .Where(m => m.ArtifactId == artifactId)
+            .OrderByDescending(m => m.MovedAt)
+            .ToListAsync();
+    }
+
+    public async Task<ArtifactMovementHistory?> GetByIdAsync(Guid id)
+    {
+        return await _context.ArtifactMovementHistories
+            .Include(m => m.FromWorkflow)
+            .Include(m => m.ToWorkflow)
+            .FirstOrDefaultAsync(m => m.Id == id);
+    }
+
+    public async Task<ArtifactMovementHistory> CreateAsync(ArtifactMovementHistory history)
+    {
+        _context.ArtifactMovementHistories.Add(history);
+        await _context.SaveChangesAsync();
+        return history;
     }
 }
 

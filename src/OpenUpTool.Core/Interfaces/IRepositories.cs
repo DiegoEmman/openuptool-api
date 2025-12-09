@@ -188,3 +188,112 @@ public interface IWorkflowPermissionRepository
     Task<WorkflowPermission> UpdateAsync(WorkflowPermission permission);
     Task DeleteAsync(Guid id);
 }
+
+// ========== HU-018: Global Configuration Repositories ==========
+
+public interface IGlobalConfigurationRepository
+{
+    Task<IEnumerable<GlobalConfiguration>> GetAllAsync();
+    Task<GlobalConfiguration?> GetByIdAsync(Guid id);
+    Task<GlobalConfiguration?> GetByIdWithDetailsAsync(Guid id);
+    Task<GlobalConfiguration?> GetDefaultAsync();
+    Task<GlobalConfiguration> CreateAsync(GlobalConfiguration configuration);
+    Task<GlobalConfiguration> UpdateAsync(GlobalConfiguration configuration);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IRoleTemplateRepository
+{
+    Task<IEnumerable<RoleTemplate>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<RoleTemplate?> GetByIdAsync(Guid id);
+    Task<RoleTemplate> CreateAsync(RoleTemplate roleTemplate);
+    Task<RoleTemplate> UpdateAsync(RoleTemplate roleTemplate);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IPhaseTemplateRepository
+{
+    Task<IEnumerable<PhaseTemplate>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<PhaseTemplate?> GetByIdAsync(Guid id);
+    Task<PhaseTemplate> CreateAsync(PhaseTemplate phaseTemplate);
+    Task<PhaseTemplate> UpdateAsync(PhaseTemplate phaseTemplate);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IArtifactTypeTemplateRepository
+{
+    Task<IEnumerable<ArtifactTypeTemplate>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<IEnumerable<ArtifactTypeTemplate>> GetByPhaseCodeAsync(Guid configurationId, string phaseCode);
+    Task<ArtifactTypeTemplate?> GetByIdAsync(Guid id);
+    Task<ArtifactTypeTemplate?> GetByIdWithCustomFieldsAsync(Guid id);
+    Task<ArtifactTypeTemplate> CreateAsync(ArtifactTypeTemplate artifactTypeTemplate);
+    Task<ArtifactTypeTemplate> UpdateAsync(ArtifactTypeTemplate artifactTypeTemplate);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IWorkflowTemplateRepository
+{
+    Task<IEnumerable<WorkflowTemplate>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<WorkflowTemplate?> GetByIdAsync(Guid id);
+    Task<WorkflowTemplate?> GetByIdWithStatesAsync(Guid id);
+    Task<WorkflowTemplate> CreateAsync(WorkflowTemplate workflowTemplate);
+    Task<WorkflowTemplate> UpdateAsync(WorkflowTemplate workflowTemplate);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IWorkflowStateTemplateRepository
+{
+    Task<IEnumerable<WorkflowStateTemplate>> GetByWorkflowTemplateIdAsync(Guid workflowTemplateId);
+    Task<WorkflowStateTemplate?> GetByIdAsync(Guid id);
+    Task<WorkflowStateTemplate> CreateAsync(WorkflowStateTemplate stateTemplate);
+    Task<WorkflowStateTemplate> UpdateAsync(WorkflowStateTemplate stateTemplate);
+    Task DeleteAsync(Guid id);
+}
+
+public interface ICustomFieldDefinitionRepository
+{
+    Task<IEnumerable<CustomFieldDefinition>> GetByArtifactTypeTemplateIdAsync(Guid artifactTypeTemplateId);
+    Task<IEnumerable<CustomFieldDefinition>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<CustomFieldDefinition?> GetByIdAsync(Guid id);
+    Task<CustomFieldDefinition> CreateAsync(CustomFieldDefinition customField);
+    Task<CustomFieldDefinition> UpdateAsync(CustomFieldDefinition customField);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IConfigurationChangeHistoryRepository
+{
+    Task<IEnumerable<ConfigurationChangeHistory>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<IEnumerable<ConfigurationChangeHistory>> GetByConfigurationIdAndVersionAsync(Guid configurationId, int version);
+    Task<ConfigurationChangeHistory?> GetByIdAsync(Guid id);
+    Task<ConfigurationChangeHistory> CreateAsync(ConfigurationChangeHistory history);
+}
+
+public interface IProjectConfigurationRepository
+{
+    Task<IEnumerable<ProjectConfiguration>> GetAllAsync();
+    Task<IEnumerable<ProjectConfiguration>> GetByConfigurationIdAsync(Guid configurationId);
+    Task<ProjectConfiguration?> GetByProjectIdAsync(Guid projectId);
+    Task<ProjectConfiguration?> GetByIdAsync(Guid id);
+    Task<ProjectConfiguration> CreateAsync(ProjectConfiguration projectConfiguration);
+    Task<ProjectConfiguration> UpdateAsync(ProjectConfiguration projectConfiguration);
+    Task DeleteAsync(Guid id);
+}
+
+public interface IArtifactCustomFieldValueRepository
+{
+    Task<IEnumerable<ArtifactCustomFieldValue>> GetByArtifactIdAsync(Guid artifactId);
+    Task<ArtifactCustomFieldValue?> GetByIdAsync(Guid id);
+    Task<ArtifactCustomFieldValue?> GetByArtifactAndFieldAsync(Guid artifactId, Guid customFieldDefinitionId);
+    Task<ArtifactCustomFieldValue> CreateAsync(ArtifactCustomFieldValue value);
+    Task<ArtifactCustomFieldValue> UpdateAsync(ArtifactCustomFieldValue value);
+    Task DeleteAsync(Guid id);
+    Task DeleteByArtifactIdAsync(Guid artifactId);
+}
+
+// HU-020: Repositorio para historial de movimientos de artefactos
+public interface IArtifactMovementHistoryRepository
+{
+    Task<IEnumerable<ArtifactMovementHistory>> GetByArtifactIdAsync(Guid artifactId);
+    Task<ArtifactMovementHistory?> GetByIdAsync(Guid id);
+    Task<ArtifactMovementHistory> CreateAsync(ArtifactMovementHistory history);
+}

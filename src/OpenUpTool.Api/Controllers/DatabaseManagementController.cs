@@ -121,8 +121,8 @@ public class DatabaseManagementController : ControllerBase
                 new Role 
                 { 
                     Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-                    Name = "Tester", 
-                    Description = "Tester con acceso a pruebas y reportes",
+                    Name = "Viewer", 
+                    Description = "Usuario con permisos de solo lectura (viewer)",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 }

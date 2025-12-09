@@ -525,7 +525,7 @@ public class WorkflowsController : ControllerBase
     /// </summary>
     [HttpPost("{workflowId}/test-approve")]
     [RequireWorkflowPermission("aprobar")]
-    public async Task<ActionResult> TestApproveAction(Guid workflowId)
+    public ActionResult TestApproveAction(Guid workflowId)
     {
         try
         {
@@ -550,7 +550,7 @@ public class WorkflowsController : ControllerBase
     /// </summary>
     [HttpPost("{workflowId}/test-create")]
     [RequireWorkflowPermission("crear")]
-    public async Task<ActionResult> TestCreateAction(Guid workflowId)
+    public ActionResult TestCreateAction(Guid workflowId)
     {
         try
         {
@@ -575,7 +575,7 @@ public class WorkflowsController : ControllerBase
     /// </summary>
     [HttpPost("{workflowId}/test-edit")]
     [RequireWorkflowPermission("editar")]
-    public async Task<ActionResult> TestEditAction(Guid workflowId)
+    public ActionResult TestEditAction(Guid workflowId)
     {
         try
         {

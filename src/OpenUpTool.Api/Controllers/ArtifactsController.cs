@@ -456,5 +456,132 @@ public class ArtifactsController : ControllerBase
             return StatusCode(500, new { message = "Error al validar fase" });
         }
     }
+
+    // HU-020: Endpoints de reasignación de artefactos
+
+    /// <summary>
+    /// Reasigna un artefacto a una nueva fase
+    /// </summary>
+    [HttpPost("{artifactId}/reassign-phase")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<ReassignmentResultDto>> ReassignToPhase(
+        Guid projectId,
+        Guid artifactId,
+        [FromBody] ReassignArtifactDto dto)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var result = await _artifactService.ReassignToPhaseAsync(artifactId, userId.ToString(), dto);
+            
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reasignar artefacto {ArtifactId} a fase", artifactId);
+            return StatusCode(500, new { message = "Error al reasignar artefacto" });
+        }
+    }
+
+    /// <summary>
+    /// Reasigna un artefacto a un nuevo workflow
+    /// </summary>
+    [HttpPost("{artifactId}/reassign-workflow")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<ActionResult<ReassignmentResultDto>> ReassignWorkflow(
+        Guid projectId,
+        Guid artifactId,
+        [FromBody] ReassignWorkflowDto dto)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var result = await _artifactService.ReassignWorkflowAsync(artifactId, userId.ToString(), dto);
+            
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reasignar workflow del artefacto {ArtifactId}", artifactId);
+            return StatusCode(500, new { message = "Error al reasignar workflow" });
+        }
+    }
+
+    /// <summary>
+    /// Valida una reasignación sin ejecutarla
+    /// </summary>
+    [HttpPost("{artifactId}/validate-reassignment")]
+    public async Task<ActionResult<ReassignmentResultDto>> ValidateReassignment(
+        Guid projectId,
+        Guid artifactId,
+        [FromBody] ValidateReassignmentDto dto)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var result = await _artifactService.ValidateReassignmentAsync(artifactId, dto);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al validar reasignación del artefacto {ArtifactId}", artifactId);
+            return StatusCode(500, new { message = "Error al validar reasignación" });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el historial de movimientos de un artefacto
+    /// </summary>
+    [HttpGet("{artifactId}/movement-history")]
+    public async Task<ActionResult<IEnumerable<ArtifactMovementHistoryDto>>> GetMovementHistory(
+        Guid projectId,
+        Guid artifactId)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var hasAccess = await _projectService.HasUserAccessAsync(userId, projectId);
+            if (!hasAccess)
+                return Forbid();
+
+            var history = await _artifactService.GetMovementHistoryAsync(artifactId);
+            return Ok(history);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener historial de movimientos del artefacto {ArtifactId}", artifactId);
+            return StatusCode(500, new { message = "Error al obtener historial de movimientos" });
+        }
+    }
 }
 

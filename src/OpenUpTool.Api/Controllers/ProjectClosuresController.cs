@@ -12,13 +12,16 @@ namespace OpenUpTool.Api.Controllers;
 public class ProjectClosuresController : ControllerBase
 {
     private readonly IProjectClosureService _closureService;
+    private readonly IProjectService _projectService;
     private readonly ILogger<ProjectClosuresController> _logger;
 
     public ProjectClosuresController(
         IProjectClosureService closureService,
+        IProjectService projectService,
         ILogger<ProjectClosuresController> logger)
     {
         _closureService = closureService;
+        _projectService = projectService;
         _logger = logger;
     }
 
@@ -128,6 +131,68 @@ public class ProjectClosuresController : ControllerBase
         {
             _logger.LogError(ex, "Error al crear cierre");
             return StatusCode(500, new { message = "Error al crear cierre" });
+        }
+    }
+
+    /// <summary>
+    /// Cerrar proyecto (valida checklist y artefactos). Si `force` es true se requiere rol Admin.
+    /// </summary>
+    [HttpPost("project/{projectId}/close")]
+    public async Task<ActionResult<ProjectClosureDto>> CloseProject(Guid projectId, [FromBody] CloseProjectDto dto)
+    {
+        try
+        {
+            var validation = await _closureService.ValidateClosureAsync(projectId);
+
+            if (!dto.Force && !validation.CanClose)
+            {
+                return BadRequest(validation);
+            }
+
+            // If forcing, only Admins can perform
+            if (dto.Force)
+            {
+                var isAdmin = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == System.Security.Claims.ClaimTypes.Role && c.Value == "Admin");
+                if (!isAdmin)
+                    return Forbid();
+            }
+
+            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Unknown";
+
+            // Use the checklist from validation to build the closure document checklist
+            var checklist = validation.ChecklistPreview ?? new List<ClosureCriteriaDto>();
+
+            var createDto = new CreateProjectClosureDto
+            {
+                ProjectId = projectId,
+                Summary = dto.Justification ?? (validation.CanClose ? "Cierre automático al cumplir criterios" : "Cierre forzado"),
+                LessonsLearned = string.Empty,
+                Recommendations = string.Empty,
+                Checklist = checklist
+            };
+
+            var created = await _closureService.CreateClosureAsync(createDto, userEmail);
+
+            // Archive project if closure created
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            Guid archivedBy = Guid.Empty;
+            if (!string.IsNullOrEmpty(userIdClaim)) Guid.TryParse(userIdClaim, out archivedBy);
+            await _projectService.ArchiveProjectAsync(projectId, archivedBy);
+
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cerrar el proyecto {ProjectId}", projectId);
+            return StatusCode(500, new { message = "Error al cerrar el proyecto" });
         }
     }
 

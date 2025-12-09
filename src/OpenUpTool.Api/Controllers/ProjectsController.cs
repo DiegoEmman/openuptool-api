@@ -29,6 +29,50 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
+    /// Verifica si el usuario actual tiene permiso para una acción en el proyecto
+    /// </summary>
+    [HttpGet("{id}/permissions/{permissionAction}")]
+    public async Task<ActionResult> CheckPermission(Guid id, string permissionAction)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // Obtener rol del usuario en el proyecto
+            var users = await _projectService.GetProjectUsersAsync(id);
+            var me = users.FirstOrDefault(u => u.Id == userId);
+            var role = me?.Role ?? "";
+
+            bool hasPermission = false;
+            // Simple mapping aligned with the permission matrix used by the tests
+            switch (permissionAction.ToLowerInvariant())
+            {
+                case "crear_artefacto":
+                case "editar_artefacto":
+                    hasPermission = role == "Admin" || role == "Manager" || role == "Developer";
+                    break;
+                case "crear_proyecto":
+                case "editar_proyecto":
+                case "eliminar_proyecto":
+                    hasPermission = role == "Admin" || role == "Manager";
+                    break;
+                default:
+                    hasPermission = role == "Admin" || role == "Manager";
+                    break;
+            }
+
+            return Ok(new { hasPermission, role });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al verificar permiso {Action} para el proyecto {ProjectId}", permissionAction, id);
+            return StatusCode(500, new { message = "Error al verificar permiso" });
+        }
+    }
+
+    /// <summary>
     /// Obtiene todos los proyectos del usuario autenticado
     /// </summary>
     [HttpGet]

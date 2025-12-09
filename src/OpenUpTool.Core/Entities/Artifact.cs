@@ -43,4 +43,5 @@ public class Artifact
     public WorkflowState? CurrentState { get; set; }
     public ICollection<ArtifactVersion> Versions { get; set; } = new List<ArtifactVersion>();
     public ICollection<ArtifactStateHistory> StateHistories { get; set; } = new List<ArtifactStateHistory>();
+    public ICollection<ArtifactMovementHistory> MovementHistories { get; set; } = new List<ArtifactMovementHistory>(); // HU-020
 }

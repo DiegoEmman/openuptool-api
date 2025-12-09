@@ -109,6 +109,7 @@ public partial class Program
         builder.Services.AddScoped<IIterationScopeRepository, IterationScopeRepository>();
         builder.Services.AddScoped<IProjectInvitationRepository, ProjectInvitationRepository>();
         builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+        builder.Services.AddScoped<INotificationPreferenceRepository, NotificationPreferenceRepository>(); // HU-021
         builder.Services.AddScoped<IProjectUserRoleRepository, ProjectUserRoleRepository>();
         builder.Services.AddScoped<IMicroincrementRepository, MicroincrementRepository>();
         builder.Services.AddScoped<IProjectClosureRepository, ProjectClosureRepository>();
@@ -118,6 +119,19 @@ public partial class Program
         builder.Services.AddScoped<IWorkflowStateResponsibleRepository, WorkflowStateResponsibleRepository>();
         builder.Services.AddScoped<IArtifactStateHistoryRepository, ArtifactStateHistoryRepository>();
         builder.Services.AddScoped<IWorkflowPermissionRepository, WorkflowPermissionRepository>();
+        builder.Services.AddScoped<IArtifactMovementHistoryRepository, ArtifactMovementHistoryRepository>(); // HU-020
+        
+        // HU-018: Global Configuration Repositories
+        builder.Services.AddScoped<IGlobalConfigurationRepository, GlobalConfigurationRepository>();
+        builder.Services.AddScoped<IRoleTemplateRepository, RoleTemplateRepository>();
+        builder.Services.AddScoped<IPhaseTemplateRepository, PhaseTemplateRepository>();
+        builder.Services.AddScoped<IArtifactTypeTemplateRepository, ArtifactTypeTemplateRepository>();
+        builder.Services.AddScoped<IWorkflowTemplateRepository, WorkflowTemplateRepository>();
+        builder.Services.AddScoped<IWorkflowStateTemplateRepository, WorkflowStateTemplateRepository>();
+        builder.Services.AddScoped<ICustomFieldDefinitionRepository, CustomFieldDefinitionRepository>();
+        builder.Services.AddScoped<IConfigurationChangeHistoryRepository, ConfigurationChangeHistoryRepository>();
+        builder.Services.AddScoped<IProjectConfigurationRepository, ProjectConfigurationRepository>();
+        builder.Services.AddScoped<IArtifactCustomFieldValueRepository, ArtifactCustomFieldValueRepository>();
 
         // Registrar servicios
         builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -144,6 +158,18 @@ public partial class Program
         builder.Services.AddScoped<IWorkflowStateService, OpenUpTool.Infrastructure.Services.WorkflowStateService>();
         builder.Services.AddScoped<IArtifactStateService, OpenUpTool.Infrastructure.Services.ArtifactStateService>();
         builder.Services.AddScoped<IWorkflowPermissionService, OpenUpTool.Infrastructure.Services.WorkflowPermissionService>();
+        
+        // HU-018: Global Configuration Services
+        builder.Services.AddScoped<IGlobalConfigurationService, GlobalConfigurationService>();
+        builder.Services.AddScoped<IRoleTemplateService, RoleTemplateService>();
+        builder.Services.AddScoped<IPhaseTemplateService, PhaseTemplateService>();
+        builder.Services.AddScoped<IArtifactTypeTemplateService, ArtifactTypeTemplateService>();
+        builder.Services.AddScoped<IWorkflowTemplateService, WorkflowTemplateService>();
+        builder.Services.AddScoped<IWorkflowStateTemplateService, WorkflowStateTemplateService>();
+        builder.Services.AddScoped<ICustomFieldDefinitionService, CustomFieldDefinitionService>();
+        builder.Services.AddScoped<IProjectConfigurationService, ProjectConfigurationService>();
+        builder.Services.AddScoped<IArtifactCustomFieldValueService, ArtifactCustomFieldValueService>();
+        
         builder.Services.AddScoped<IFileStorageService>(sp =>
         {
             var env = sp.GetRequiredService<IWebHostEnvironment>();
@@ -183,6 +209,7 @@ public partial class Program
             {
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true; // HU-023: Para deserialización flexible
             });
         
         builder.Services.AddEndpointsApiExplorer();
