@@ -64,7 +64,10 @@ public class ProjectsControllerTests
                 null,
                 new List<string> { "Inception" },
                 DateTime.UtcNow,
-                DateTime.UtcNow
+                DateTime.UtcNow,
+                false,
+                null,
+                null
             ),
             new ProjectDto(
                 Guid.NewGuid(),
@@ -78,7 +81,10 @@ public class ProjectsControllerTests
                 null,
                 new List<string> { "Elaboration" },
                 DateTime.UtcNow,
-                DateTime.UtcNow
+                DateTime.UtcNow,
+                false,
+                null,
+                null
             )
         };
 
@@ -100,24 +106,27 @@ public class ProjectsControllerTests
     {
         // Arrange
         var projectId = Guid.NewGuid();
-        var project = new ProjectDto(
+        var projectDto = new ProjectDto(
             projectId,
             "Test Project",
-            "TEST1",
+            "TEST",
             DateTime.UtcNow,
             "Active",
             "Test Owner",
             "Test Description",
-            new List<string> { "test" },
+            new List<string> { "tag1" },
             null,
             new List<string> { "Inception" },
             DateTime.UtcNow,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            false,
+            null,
+            null
         );
 
         _projectServiceMock
             .Setup(s => s.GetProjectByIdAsync(projectId))
-            .ReturnsAsync(project);
+            .ReturnsAsync(projectDto);
         
         _projectServiceMock
             .Setup(s => s.HasUserAccessAsync(_testUserId, projectId))
@@ -179,7 +188,10 @@ public class ProjectsControllerTests
             null,
             new List<string> { "Inception" },
             DateTime.UtcNow,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            false,
+            null,
+            null
         );
 
         _projectServiceMock
